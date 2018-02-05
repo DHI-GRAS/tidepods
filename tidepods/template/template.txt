@@ -1,0 +1,27 @@
+// Created     : 2015-03-27 11:6:51
+// DLL id      : C:\Program Files (x86)\DHI\2016\bin\x64\pfs2004.dll
+// PFS version : Feb  4 2015 19:28:27
+
+[TidePredictor]
+   CLSID = '{1BF41B57-0F28-11D2-B31A-00805F41FBEB}'
+   TypeName = 'M21_TidePH'
+   CREATEDTIME = '2015-03-27T10:25:33'
+   MODIFIEDTIME = '2015-03-27T10:25:33'
+   NOTES = ''
+      Name = 'Points_Example'
+      constituent_file_name = 'C:\Program Files (x86)\DHI\2016\MIKE Zero\Application Data\Tide_Constituents\global_tide_constituents_0.125deg.dfs2'
+      prepack_file_name = 'C:\Program Files (x86)\DHI\2016\MIKE Zero\Application Data\Tide_Constituents\prepack.dat'
+      start_date = ${REPLACE_YEAR}, 1, 1
+      end_date = ${REPLACE_YEAR}, 12, 31 
+      timestep = 0.5
+      number_of_files = 1
+      ShowGeographic = 1
+      [File_1]
+         format = 0
+         file_name = |.\${REPLACE_OUTFILE_NAME}.dfs0|
+         description = 'Predicted tide level'
+         number_of_points = ${REPLACE_NUM_PTS}
+
+${REPLACE_POINTS}
+EndSect  // File_1
+EndSect  // TidePredictor
