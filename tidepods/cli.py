@@ -8,7 +8,7 @@ def cli():
 
 @cli.command()
 @click.option('-s','--shp', type=click.Path(dir_okay=False, required=True))
-@click.option('-t', '--template' type=click.Path(dir_okay=False), required=True)
+@click.option('-t', '--template', type=click.Path(dir_okay=False), required=True)
 @click.option('-d', '--date', type=click.INT, required=True)
 @click.argument('pfs', type=click.Path(dir_okay=False))
 
