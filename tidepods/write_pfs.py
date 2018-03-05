@@ -44,7 +44,7 @@ def generate_pts(infile):
                 plist.append(p)
     return (plist)
 
-def write_pfs(shp, template, acq_date, pfs):
+def write_pfs(shp, template, date, pfs):
     """Creates pfs file for input to MIKE
 
     Parameters
@@ -55,8 +55,8 @@ def write_pfs(shp, template, acq_date, pfs):
     template: str
         path to template textfile
 
-    acq_date: int
-        image acquisiton date (yyyymmdd)
+    date: str
+        image acquisiton date (YYYYMMDD)
         
     pfs: str
         path to pfs file
@@ -65,8 +65,8 @@ def write_pfs(shp, template, acq_date, pfs):
     -------
     pfs file: a .pfs file for input to MIKE
     """
-    acq_date_str = str(acq_date)
-    acq_year = acq_date_str[:4]
+    date_str = str(date)
+    acq_year = date_str[:4]
     plist = generate_pts(shp)
     formatted_pts = []
     pid = 1
