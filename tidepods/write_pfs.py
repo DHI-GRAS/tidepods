@@ -5,6 +5,14 @@ from fiona.transform import transform_geom
 import numpy as np
 from shapely.geometry import shape, Point
 
+POINT_FMT = (
+    '''[Point_{pid}]
+description = {pid}
+y = {coords[0]}
+x = {coords[1]}
+EndSect // Point_{pid}
+''')
+
 
 def transform_shape(infile):
     """Reprojects polygon to EPSG:4326 and return as shapely object
@@ -73,12 +81,6 @@ def write_pfs(shp, template, date, pfs):
     acq_year = date_str[:4]
     plist = generate_pts(shp)
     formatted_pts = []
-    POINT_FMT = (
-        '''[Point_{pid}]
-        description = {pid}
-        y = {coords[0]}
-        x = {coords[1]}
-        EndSect // Point_{pid}\n''')
 
     for pid, p in enumerate(plist, 1):
         points_str = POINT_FMT.format(pid=pid, coords=p.coords[0])
