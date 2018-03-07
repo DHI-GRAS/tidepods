@@ -7,7 +7,7 @@ from shapely.geometry import shape, Point
 
 
 def transform_shape(infile):
-    '''Reprojects polygon to EPSG:4326 and return as shapely object
+    """Reprojects polygon to EPSG:4326 and return as shapely object
 
     Parameters
     ----------
@@ -18,7 +18,7 @@ def transform_shape(infile):
     -------
     shp : shapely object
 
-    '''
+    """
     with fiona.open(infile) as c:
         infile_4326 = transform_geom(c.crs.get("init"), 'epsg:4326', c[0]['geometry'])
         shp = shape(infile_4326)
@@ -26,19 +26,19 @@ def transform_shape(infile):
 
 
 def generate_pts(infile):
-    '''Generates fixed distance points within a polygon
+    """Generates fixed distance points within a polygon
 
     Parameters
     ----------
     infile : str
-            File path to polygon.
+             File path to polygon.
 
     Returns
     -------
     plist : list
             List of shapely points for points within infile
 
-    '''
+    """
     shp = transform_shape(infile)
     bounds = shp.bounds
     minx, miny, maxx, maxy = bounds
@@ -52,7 +52,7 @@ def generate_pts(infile):
 
 
 def write_pfs(shp, template, date, pfs):
-    '''Creates pfs file for input to MIKE
+    """Creates pfs file for input to MIKE
 
     Parameters
     ----------
@@ -68,21 +68,21 @@ def write_pfs(shp, template, date, pfs):
     pfs : str
           File path to pfs file.
 
-    '''
+    """
     date_str = str(date)
     acq_year = date_str[:4]
     plist = generate_pts(shp)
     formatted_pts = []
-    pid = 1
-    newline = '\n'
-    for p in plist:
-        point_text = ''.join(['[Point_', str(pid), ']', newline,
-                              'description = ', str(pid), newline,
-                              'y = ', str(p.coords[0][0]), newline,
-                              'x = ', str(p.coords[0][1]), newline,
-                              'EndSect // Point_', str(pid), newline])
-        formatted_pts.append(point_text)
-        pid += 1
+    POINT_FMT = (
+        '''[Point_{pid}]
+        description = {pid}
+        y = {coords[0]}
+        x = {coords[1]}
+        EndSect // Point_{pid}\n''')
+
+    for pid, p in enumerate(plist, 1):
+        points_str = POINT_FMT.format(pid=pid, coords=p.coords[0])
+        formatted_pts.append(points_str)
 
     with open(template) as infile, open(pfs, 'w') as outfile:
         d = {'REPLACE_YEAR': acq_year, 'REPLACE_OUTFILE_NAME': pfs[:-4],
