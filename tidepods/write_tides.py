@@ -43,7 +43,7 @@ def read_dfs0(infile, date, sdkpath, **kwargs):
     timestep = int(dfsfile.FileInfo.TimeAxis.TimeStep / 60)
     sdt = dfsfile.FileInfo.TimeAxis.StartDateTime
     dfs_start_datetime = datetime.datetime(*(getattr(sdt, n) for n in ['Year', 'Month', 'Day',
-                                             'Hour', 'Minute']))
+                                             'Hour', 'Minute', 'Second']))
 
     diff = dfs_img_datetime - dfs_start_datetime
     img_timestep = int(((diff.days * 24 * 60) + (diff.seconds / 60)) / timestep)
