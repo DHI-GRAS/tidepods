@@ -70,7 +70,7 @@ def pfs(**kwargs):
 @click.option('-o', '--outfile', type=click.Path(dir_okay=False), required=True,
               help='Path to output points shapefile containing the tidal values')
 @click.option('-p', '--sdkpath', type=click.Path(dir_okay=True, file_okay=False),
-              default=r'C:\Program Files (x86)\DHI\2017\MIKE SDK\bin', show_defaults=True,
+              default=r'C:\Program Files (x86)\DHI\2016\MIKE SDK\bin', show_default=True,
               help='Path to DHI SDK install directory')
 def tides(date, timestamp, **kwargs):
     """Extract tide values from dfs0 file to a point shapefile

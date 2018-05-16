@@ -41,8 +41,9 @@ def read_dfs0(infile, date, sdkpath, **kwargs):
     tide_values = []
     # read timestep in seconds, convert to minutes
     timestep = int(dfsfile.FileInfo.TimeAxis.TimeStep / 60)
-    dfs_start_datetime = datetime.datetime.strptime(str(dfsfile.FileInfo.TimeAxis.StartDateTime),
-                                                    '%m/%d/%Y %H:%M:%S')
+    sdt = dfsfile.FileInfo.TimeAxis.StartDateTime
+    dfs_start_datetime = datetime.datetime(*(getattr(sdt, n) for n in ['Year', 'Month', 'Day',
+                                             'Hour', 'Minute']))
 
     diff = dfs_img_datetime - dfs_start_datetime
     img_timestep = int(((diff.days * 24 * 60) + (diff.seconds / 60)) / timestep)
