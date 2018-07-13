@@ -28,7 +28,7 @@ def transform_shape(infile):
     shp : shapely object
 
     """
-    with fiona.open(infile) as c:
+    with fiona.open(infile, encoding='utf-8') as c:
         infile_4326 = transform_geom(c.crs.get("init"), 'epsg:4326', c[0]['geometry'])
         shp = shape(infile_4326)
     return shp
