@@ -44,6 +44,9 @@ def cli():
 @click.option('-o', '--outfile', type=click.Path(dir_okay=False), required=True,
               help='Path to output points shapefile containing the tidal values '
               'e.g. C:/tides/pts_tides.shp')
+@click.option('-l', '--level', type=click.Choice(['LAT', 'MSL']), required=True,
+              help='Tide value return type, LAT (Lowest Astronomical Tide) '
+              'or MSL (Mean Sea Level)')
 @click.option('-p', '--mikepath', type=click.Path(dir_okay=True, file_okay=False),
               default=r'C:\Program Files (x86)\DHI\2016', show_default=True,
               help='Path to DHI MIKE version install root directory')

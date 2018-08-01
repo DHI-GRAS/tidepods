@@ -11,7 +11,7 @@ from shapely.geometry import mapping
 from . import generate_pts as gp, make_pfs as mp
 
 
-def read_dfs0(infile, date, mikepath, tempdir):
+def read_dfs0(infile, date, mikepath, tempdir, level):
     """Read and extract values from dfs0 file using DHI.Generic.MikeZero.DFS
 
     Parameters
@@ -27,6 +27,9 @@ def read_dfs0(infile, date, mikepath, tempdir):
 
     tempdir : str
         Path to temporary directory
+        
+    level : str
+        Click option LAT or MSL
 
     Returns
     -------
@@ -74,15 +77,19 @@ def read_dfs0(infile, date, mikepath, tempdir):
     for i in range(dfsfile.ItemInfo.Count):
         min_value = float(dfsfile.ItemInfo[i].MinValue)
         acq_value = dfsfile.ReadItemTimeStep(i+1, img_timestep).Data[0]  # Value c.f. MSL
-        img_value = acq_value - min_value  # Value above LAT
-        tide_values.append(img_value)
+
+        if level == 'LAT':
+            lat_value = acq_value - min_value  # Value above LAT
+            tide_values.append(lat_value)
+        else:
+            tide_values.append(acq_value)
 
     dfsfile.Dispose()
 
     return tide_values
 
 
-def write_tide_values(infile, date, mikepath, outfile, tempdir, **kwargs):
+def write_tide_values(infile, date, mikepath, outfile, tempdir, level):
     """Writes points to new shapefile
 
     Parameters
@@ -94,7 +101,7 @@ def write_tide_values(infile, date, mikepath, outfile, tempdir, **kwargs):
     outfile : str
         File path to output point shapefile.
     """
-    tide_values = read_dfs0(infile, date, mikepath, tempdir)
+    tide_values = read_dfs0(infile, date, mikepath, tempdir, level)
 
     plist = gp.generate_pts(infile)
 
