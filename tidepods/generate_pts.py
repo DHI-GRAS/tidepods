@@ -1,26 +1,31 @@
-import fiona
-from fiona.transform import transform_geom
 import numpy as np
-from shapely.geometry import shape, Point
+import rasterio
+import rasterio.warp
+from shapely.geometry import box, Point
 
 
 def transform_shape(infile):
-    """Reprojects polygon to EPSG:4326 and return as shapely object
+    """Reads AOI bounds and reprojects to EPSG:4326. Returns bounds as shapely polygon
 
     Parameters
     ----------
     infile : str
-        File path to polygon.
+        File path to raster AOI.
 
     Returns
     -------
     shp : shapely object
 
     """
-    with fiona.open(infile, encoding='utf-8') as c:
-        infile_4326 = transform_geom(c.crs.get("init"), 'epsg:4326', c[0]['geometry'])
-        shp = shape(infile_4326)
+    with rasterio.open(infile) as src:
+        left, bottom, right, top = src.bounds
+        in_crs = src.crs
+        out_crs = rasterio.crs.CRS.from_epsg(4326)
+        minx, miny, maxx, maxy = rasterio.warp.transform_bounds(in_crs, out_crs,
+                                                                left, bottom, right, top)
+        shp = box(minx, miny, maxx, maxy)
         shp = shp.buffer(0.125)
+
     return shp
 
 
@@ -47,4 +52,5 @@ def generate_pts(infile):
             p = (Point(x, y))
             if p.within(shp):
                 plist.append(p)
+
     return plist

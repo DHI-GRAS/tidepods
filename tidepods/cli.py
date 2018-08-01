@@ -36,23 +36,24 @@ def cli():
 
 @cli.command()
 @click.option('-i', '--infile', type=click.Path(dir_okay=False, exists=True), required=True,
-              help='Path to AOI file for points creation e.g. C:/tides/aoi.shp')
+              help='Path to AOI raster file for points creation e.g. C:/tides/aoi.tif')
 @click.option('-d', '--date', type=DATEIN, required=True,
               help='Image acquisiton date (yyyymmdd) e.g. 20150131')
 @click.option('-t', '--timestamp', type=TIMEIN, required=True,
-              help='Image acquisition time (HH:MM) e.g. 12:34')
+              help='Image acquisition time (HH:MM) e.g. 10:30')
 @click.option('-o', '--outfile', type=click.Path(dir_okay=False), required=True,
-              help='Path to output points shapefile containing the tidal values e.g. C:/tides/pts_tides.shp')
+              help='Path to output points shapefile containing the tidal values '
+              'e.g. C:/tides/pts_tides.shp')
 @click.option('-p', '--mikepath', type=click.Path(dir_okay=True, file_okay=False),
               default=r'C:\Program Files (x86)\DHI\2016', show_default=True,
               help='Path to DHI MIKE version install root directory')
 def points(date, timestamp, **kwargs):
-    """Extract tide values from dfs0 file to a point shapefile
+    """Create a point shapefile containing tide values over an AOI
 
     Example use:
 
-    tidepods tides -p "C:/Program Files (x86)/DHI/2016/MIKE SDK/bin" -i C:/tides/aoi.dfs0
-    -d 20150131 -t 12:34 -s C:/tides/pts.shp -o C:/tides/pts_tides.shp
+    tidepods points -p "C:/Program Files (x86)/DHI/2016/MIKE SDK/bin" -i C:/tides/aoi.tif
+    -d 20150131 -t 10:30 -o C:/tides/pts_tides.shp
     """
     kwargs.update(date=dt.combine(date, timestamp))
     from . import create_tides as ct

@@ -33,7 +33,8 @@ def generatepfs(infile, date, mikepath, tempdir):
 
     sdkpath = os.path.join(mikepath, r'MIKE SDK\bin')
     constituents_path = os.path.join(mikepath,
-                                     r'MIKE Zero\Application Data\Tide_Constituents\global_tide_constituents_0.125deg.dfs2')
+                                     r'MIKE Zero\Application Data\Tide_Constituents\global_tide'
+                                     '_constituents_0.125deg.dfs2')
     prepack_path = os.path.join(mikepath,
                                 r'MIKE Zero\Application Data\Tide_Constituents\prepack.dat')
 
@@ -85,7 +86,7 @@ def generatepfs(infile, date, mikepath, tempdir):
     pfsbuilder.AddKeyword('format')
     pfsbuilder.AddInt(0)
     pfsbuilder.AddKeyword('file_name')
-    pfsbuilder.AddFileName(temppfs.replace('.pfs', '.dfs0'))
+    pfsbuilder.AddFileName('temp.dfs0')
     pfsbuilder.AddKeyword('description')
     pfsbuilder.AddString('Predicted Tide Level')
     pfsbuilder.AddKeyword('number_of_points')
