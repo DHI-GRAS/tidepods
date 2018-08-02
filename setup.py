@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='tidepods',
-    version='1.0',
+    version='0.1.0',
     description='Generate pfs file for input to MIKE',
     author='Mike Rosca',
     author_email='vlro@dhigroup.com',

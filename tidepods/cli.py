@@ -59,5 +59,5 @@ def points(date, timestamp, **kwargs):
     -d 20150131 -t 10:30 -o C:/tides/pts_tides.shp
     """
     kwargs.update(date=dt.combine(date, timestamp))
-    from . import create_tides as ct
+    from tidepods import create_tides as ct
     ct.main(**kwargs)

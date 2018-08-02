@@ -2,10 +2,10 @@ import os
 import subprocess
 import sys
 
-from . import generate_pts as gp
+from tidepods import generate_pts
 
 
-def generatepfs(infile, date, mikepath, tempdir):
+def generate_pfs(infile, date, mikepath, tempdir):
     """Generates a pfs file using DHI.PFS
 
     Parameters
@@ -29,8 +29,9 @@ def generatepfs(infile, date, mikepath, tempdir):
 
     """
 
+    plist = generate_pts.create_pts(infile)
+    
     temppfs = os.path.join(tempdir, 'temp.pfs')
-
     sdkpath = os.path.join(mikepath, r'MIKE SDK\bin')
     constituents_path = os.path.join(mikepath,
                                      r'MIKE Zero\Application Data\Tide_Constituents\global_tide'
@@ -39,25 +40,25 @@ def generatepfs(infile, date, mikepath, tempdir):
                                 r'MIKE Zero\Application Data\Tide_Constituents\prepack.dat')
 
     import clr
-
     clr.AddReference('System')
-
     import System
 
-    try:
+    if os.path.isdir(sdkpath):
         sys.path.insert(0, sdkpath)
+    
+    else:
+        raise ValueError(f'SDK Path folder not found. Is the path to the sdk correct: "{sdkpath}"?')
+    
+    try:
+        clr.AddReference('DHI.PFS')
+        import DHI.PFS
 
-    except System.IO.FileNotFoundException as exception:
-        msg = "Reference not found. Is the path to the sdk correct: '{0}'?".format(sdkpath)
+    except (ImportError, System.IO.FileNotFoundException) as exception:
+        msg = f'DHI.PFS not found. Is the path to the sdk correct: "{sdkpath}"?'
         raise ValueError(msg) from exception
 
-    clr.AddReference(r'DHI.PFS')
-
-    import DHI.PFS
-
-    sys.path.pop(0)
-
-    plist = gp.generate_pts(infile)
+    finally:
+        sys.path.pop(0)
 
     # Begin PFS Generation Parameters using DHI.PFS.PFSBuilder
 
@@ -131,16 +132,19 @@ def make_dfs0(infile, date, mikepath, tempdir):
     Returns
     -------
     dfsfile :  str
-        Path to the generate dfs0 file within the tempdir
+        Path to the generated dfs0 file within the tempdir
 
     """
 
-    pfsfile = generatepfs(infile, date, mikepath, tempdir)
-    tidepredictor = os.path.join(mikepath, 'bin/x64/TidePredictor.exe')
-    cmd = tidepredictor + ' ' + pfsfile
+    pfsfile = generate_pfs(infile, date, mikepath, tempdir)
+    tp = os.path.join(mikepath, r'bin\x64\TidePredictor.exe')
+    cmd = [tp, pfsfile]
 
     subprocess.check_call(cmd)
-
     dfsfile = pfsfile.replace('.pfs', '.dfs0')
 
-    return dfsfile
+    if os.path.exists(dfsfile):
+        return dfsfile
+    
+    else:
+       raise ValueError (f'DFS file not created. Is the path to the tide predictor correct:"{tp}"?')
