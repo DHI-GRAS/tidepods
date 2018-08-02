@@ -30,7 +30,7 @@ def generate_pfs(infile, date, mikepath, tempdir):
     """
 
     plist = generate_pts.create_pts(infile)
-    
+
     temppfs = os.path.join(tempdir, 'temp.pfs')
     sdkpath = os.path.join(mikepath, r'MIKE SDK\bin')
     constituents_path = os.path.join(mikepath,
@@ -45,10 +45,10 @@ def generate_pfs(infile, date, mikepath, tempdir):
 
     if os.path.isdir(sdkpath):
         sys.path.insert(0, sdkpath)
-    
+
     else:
         raise ValueError(f'SDK Path folder not found. Is the path to the sdk correct: "{sdkpath}"?')
-    
+
     try:
         clr.AddReference('DHI.PFS')
         import DHI.PFS
@@ -145,6 +145,6 @@ def make_dfs0(infile, date, mikepath, tempdir):
 
     if os.path.exists(dfsfile):
         return dfsfile
-    
+
     else:
-       raise ValueError (f'DFS file not created. Is the path to the tide predictor correct:"{tp}"?')
+        raise ValueError(f'DFS file not created. Is the path to the tide predictor correct:"{tp}"?')

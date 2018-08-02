@@ -51,10 +51,10 @@ def read_dfs0(infile, date, mikepath, tempdir, level):
 
     if os.path.isdir(sdkpath):
         sys.path.insert(0, sdkpath)
-    
+
     else:
         raise ValueError(f'SDK Path folder not found. Is the path to the sdk correct: "{sdkpath}"?')
-        
+
     try:
         clr.AddReference(r'DHI.Generic.MikeZero.DFS')
         import DHI.Generic.MikeZero.DFS
@@ -68,7 +68,6 @@ def read_dfs0(infile, date, mikepath, tempdir, level):
 
     dfs_img_datetime = date
 
-    
     dfsfile = DHI.Generic.MikeZero.DFS.DfsFileFactory.DfsGenericOpen(dfsfilepath)
     tide_values = []
     # read timestep in seconds, convert to minutes
