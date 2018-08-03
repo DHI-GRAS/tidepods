@@ -2,7 +2,7 @@
 
 Extract gridded tide values from MIKE for a given area of interest
 
-Usage requires Mike Zero(default: 2016) and the Mike SDK
+Usage requires MIKE Zero(default: 2016) and the MIKE SDK
 
 ## Installation
 
@@ -17,19 +17,19 @@ Usage requires Mike Zero(default: 2016) and the Mike SDK
     C:\Users\<USER>\AppData\Local\Continuum\miniconda3
     ```
 
-### 2. The GDAL_Data System Environment Variable
+### 2. The GDAL_DATA System Environment Variable
 
 1. Go to 'System Properties' to edit the 'Environment Variables'
 
 2. Add / verify 'GDAL_DATA' points to 'C:\OSGeo4W64\share\gdal' (assuming standard install of OSGeo4W 64-bit)
 
-### 3. Mike Zero and Mike SDK
+### 3. MIKE Zero and the MIKE SDK
 
-1. Install [Mike Zero and the Mike SDK](https://www.mikepoweredbydhi.com/) (within DHI from winserv). Default install directory is:
+1. Install [MIKE Zero and the MIKE SDK](https://www.mikepoweredbydhi.com/) (within DHI from winserv). Default install directory is:
 	```
 	C:\Program Files (x86)\DHI\[YEAR]
 	```
-2. Ensure MIKE Zero and MIKE SDK are installed. Tidepods relies on the following files being installed (assuming default installation location):
+2. Ensure MIKE Zero and the MIKE SDK are installed. Tidepods relies on the following files being installed (assuming default installation location):
 	```
 	C:\Program Files (x86)\DHI\2016\MIKE Zero\Application Data\Tide_Constituents\global_tide_constituents_0.125deg.dfs2
 	C:\Program Files (x86)\DHI\2016\MIKE Zero\Application Data\Tide_Constituents\prepack.dat
@@ -40,12 +40,12 @@ Usage requires Mike Zero(default: 2016) and the Mike SDK
 
 ### 4. The tidepods environment
 
-1. [Download the most recent environment.yml file](https://github.com/DHI-GRAS/tidepods/raw/master/environment.yml) (right-click, 'save-as') and run
+1. [Download the most recent environment.yml file](https://github.com/DHI-GRAS/tidepods/raw/master/environment.yml) (right-click, 'save-as') and run:
     ```
     conda config --add channels conda-forge
     conda env create -f /path/to/environment.yml
     ```
-   to create the**tidepods environment**
+   This creates the **tidepods environment**
 
 ## Usage
 
@@ -112,7 +112,7 @@ Options:
 <img src="https://rawgit.com/DHI-GRAS/tidepods/master/img_src/aoi_bounds.png" width=600px height=600px />
 </p>
 
-Points are then generated at every 0.125 degrees cover the AOI and a 0.125 degree buffer. These contain the tide level (MSL or LAT depending on the user input)
+Points are then generated at every 0.125 degrees covering the AOI, plus a 0.125 degree buffer. These contain the tide level (MSL or LAT depending on the user input)
 
 <p align="center">
 <img src="https://rawgit.com/DHI-GRAS/tidepods/master/img_src/points.png" width=600px height=600px />
