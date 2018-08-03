@@ -1,0 +1,14 @@
+name: tidepods222
+channels:
+    - conda-forge
+    - defaults
+dependencies:
+    - python=3
+    - click
+    - numpy
+    - rasterio
+    - fiona
+    - shapely
+    - pip:
+        - pythonnet
+        - https://github.com/DHI-GRAS/tidepods/archive/master.zip
