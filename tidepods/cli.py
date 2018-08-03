@@ -36,7 +36,7 @@ def cli():
 
 @cli.command()
 @click.option('-i', '--infile', type=click.Path(dir_okay=False, exists=True), required=True,
-              help='Path to AOI raster file for points creation e.g. C:/tides/aoi.tif')
+              help='Path to AOI raster or shapefile for points creation e.g. C:/tides/aoi.tif')
 @click.option('-d', '--date', type=DATEIN, required=True,
               help='Image acquisiton date (yyyymmdd) e.g. 20150131')
 @click.option('-t', '--timestamp', type=TIMEIN, required=True,
@@ -59,5 +59,5 @@ def points(date, timestamp, **kwargs):
     -d 20150131 -t 10:30 -o C:/tides/pts_tides.shp
     """
     kwargs.update(date=dt.combine(date, timestamp))
-    from tidepods import create_tides as ct
-    ct.main(**kwargs)
+    from tidepods import create_tides
+    create_tides.main(**kwargs)
