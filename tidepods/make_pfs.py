@@ -6,29 +6,34 @@ from tidepods import generate_pts
 
 
 def generate_pfs(infile, date, mikepath, tempdir):
-    """Generates a pfs file using DHI.PFS
+    """Generates a pfs file using DHI.PFS.
 
     Parameters
     ----------
     infile : str
-        Path to AOI polygon.
-
+        Path to polygon or raster AOI.
     date : datetime.datetime
-        Image acqusition date and time
-
+        Image acqusition date and time.
     mikepath : str
-        Path to MIKE installation directory
-
+        Path to MIKE installation directory.
     tempdir : str
-        Path to temporary directory
+        Path to temporary directory.
 
     Returns
     -------
-    temppfs :  str
-        Path to the generate pfs file within the tempdir
+    temppfs : str
+        Path to the generated pfs file within the tempdir.
+
+    Raises
+    -------
+    ValueError
+        If the path to the MIKESDK does not exist.
+    ValueError
+        If DHI.PFS could not be imported or is not found in the sdkpath folder.
+    ValueError
+        If the PFS file could not be created.
 
     """
-
     plist = generate_pts.create_pts(infile)
 
     temppfs = os.path.join(tempdir, 'temp.pfs')
@@ -43,11 +48,10 @@ def generate_pfs(infile, date, mikepath, tempdir):
     clr.AddReference('System')
     import System
 
-    if os.path.isdir(sdkpath):
-        sys.path.insert(0, sdkpath)
-
-    else:
+    if not os.path.isdir(sdkpath):
         raise ValueError(f'SDK Path folder not found. Is the path to the sdk correct: "{sdkpath}"?')
+
+    sys.path.insert(0, sdkpath)
 
     try:
         clr.AddReference('DHI.PFS')
@@ -109,31 +113,35 @@ def generate_pfs(infile, date, mikepath, tempdir):
     pfsbuilder.EndSection()
     pfsbuilder.Write(temppfs)
 
+    if not os.path.exists(temppfs):
+        raise ValueError('PFS file not created. Recheck creation options.')
+
     return temppfs
 
 
 def make_dfs0(infile, date, mikepath, tempdir):
-    """Generates a dfs0 file from the above PFS
+    """Generates a dfs0 file from the above PFS.
 
     Parameters
     ----------
     infile : str
-        Path to AOI polygon.
-
+        Path to polygon or raster AOI.
     date : datetime.datetime
-        Image acqusition date and time
-
+        Image acqusition date and time.
     mikepath : str
-        Path to MIKE installation directory
-
+        Path to MIKE installation directory.
     tempdir : str
-        Path to temporary directory
+        Path to temporary directory.
 
     Returns
     -------
-    dfsfile :  str
-        Path to the generated dfs0 file within the tempdir
+    dfsfile : str
+        Path to the generated dfs0 file within the tempdir.
 
+    Raises
+    -------
+    ValueError
+        If the DFS file could not be created.
     """
 
     pfsfile = generate_pfs(infile, date, mikepath, tempdir)
@@ -143,8 +151,7 @@ def make_dfs0(infile, date, mikepath, tempdir):
     subprocess.check_call(cmd)
     dfsfile = pfsfile.replace('.pfs', '.dfs0')
 
-    if os.path.exists(dfsfile):
-        return dfsfile
-
-    else:
+    if not os.path.exists(dfsfile):
         raise ValueError(f'DFS file not created. Is the path to the tide predictor correct:"{tp}"?')
+
+    return dfsfile

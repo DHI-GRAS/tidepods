@@ -5,16 +5,16 @@ from shapely.geometry import box, Point, shape
 
 
 def transform_shape_raster(infile):
-    """Reads raster AOI bounds and reprojects to EPSG:4326. Returns bounds as shapely polygon
+    """Reads raster AOI bounds and reprojects to EPSG:4326. Returns bounds as shapely polygon.
 
     Parameters
     ----------
     infile : str
-        File path to raster AOI.
+        Path to raster AOI.
 
     Returns
     -------
-    shp : shapely object
+    shp : shapely object.
 
     """
     import rasterio
@@ -32,16 +32,22 @@ def transform_shape_raster(infile):
 
 
 def transform_shape_vector(infile):
-    """Reads vector AOI bounds and reprojects to EPSG:4326. Returns bounds as shapely polygon
+    """Reads vector AOI bounds and reprojects to EPSG:4326. Returns bounds as shapely polygon.
 
     Parameters
     ----------
     infile : str
-        File path to vector AOI.
+        Path to vector AOI.
 
     Returns
     -------
     shp : shapely object
+        Infile AOI bounds as a shapely polygon object.
+
+    Raises
+    -------
+    ValueError
+        If the input vector file is not a polygon.
 
     """
     import fiona
@@ -50,17 +56,35 @@ def transform_shape_vector(infile):
     with fiona.open(infile, encoding='utf-8') as c:
         shp_geom = c.schema['geometry']
 
-    if shp_geom == 'Polygon':
-        with fiona.open(infile, encoding='utf-8') as c:
-            infile_4326 = transform_geom(c.crs.get("init"), 'epsg:4326', c[0]['geometry'])
-            shp = shape(infile_4326)
-            shp = shp.buffer(0.125)
-        return shp
+        if shp_geom != 'Polygon':
+            raise ValueError('Shapefile not accepted. Only polygons may be used as input.')
 
-    raise ValueError('Shapefile not accepted. Only polygons may be used as input.')
+        infile_4326 = transform_geom(c.crs.get("init"), 'epsg:4326', c[0]['geometry'])
+        shp = shape(infile_4326)
+        shp = shp.buffer(0.125)
+
+        return shp
 
 
 def transform_shape(infile):
+    """Transforms input file to EPSG:4326.
+
+    Parameters
+    ----------
+    infile : str
+        Path to polygon or raster AOI.
+
+    Returns
+    -------
+    shp : shapely object
+        Infile AOI bounds as a shapely polygon object.
+
+    Raises
+    -------
+    ValueError
+        If the input file is not an accepted raster of vector format.
+
+    """
     raster_exts = ['.tif']
     vector_exts = ['.shp', '.geojson', '.json']
     ext = os.path.splitext(infile)[1].lower()
@@ -76,17 +100,22 @@ def transform_shape(infile):
 
 
 def create_pts(infile):
-    """Generates fixed distance points within a polygon
+    """Generates fixed distance points within a polygon.
 
     Parameters
     ----------
     infile : str
-        File path to polygon.
+        Path to polygon or raster AOI.
 
     Returns
     -------
     plist : list
-        List of shapely points for points within infile
+        List of shapely points for points within infile.
+
+    Raises
+    -------
+    ValueError
+        If plist is empty as no points have been generated.
 
     """
     shp = transform_shape(infile)
@@ -99,7 +128,7 @@ def create_pts(infile):
             if p.within(shp):
                 plist.append(p)
 
-    if plist is not None:
-        return plist
+    if not plist:
+        raise ValueError('No points generated. Is the input file covering a large enough AOI?')
 
-    raise ValueError('No points generated. Is the input file covering a large enough AOI?')
+    return plist

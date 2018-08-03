@@ -14,29 +14,36 @@ VALID_LEVELS = ['LAT', 'MSL']
 
 
 def read_dfs0(infile, date, mikepath, tempdir, level):
-    """Read and extract values from dfs0 file using DHI.Generic.MikeZero.DFS
+    """Read and extract values from dfs0 file using DHI.Generic.MikeZero.DFS.
 
     Parameters
     ----------
     infile : str
         Path to AOI polygon.
-
     date : datetime.datetime
-        Image acqusition date and time
-
+        Image acqusition date and time.
     mikepath : str
-        Path to MIKE installation directory
-
+        Path to MIKE installation directory.
     tempdir : str
-        Path to temporary directory
-
+        Path to temporary directory.
     level : str
-        Click option LAT or MSL
+        Click option LAT or MSL.
 
     Returns
     -------
-    tide_values :  list
-        List of tide values above LAT for image acquisiton date and time
+    tide_values : list
+        List of tide values above LAT for image acquisiton date and time.
+
+    Raises
+    -------
+    ValueError
+        If an invalid level type was provided.
+    ValueError
+        If the path to the MIKESDK does not exist.
+    ValueError
+        If DHI.Generic could not be imported or is not found in the sdkpath folder.
+    ValueError
+        If no tide values could be generated.
 
     """
     if level not in VALID_LEVELS:
@@ -49,11 +56,10 @@ def read_dfs0(infile, date, mikepath, tempdir, level):
     clr.AddReference('System')
     import System
 
-    if os.path.isdir(sdkpath):
-        sys.path.insert(0, sdkpath)
-
-    else:
+    if not os.path.isdir(sdkpath):
         raise ValueError(f'SDK Path folder not found. Is the path to the sdk correct: "{sdkpath}"?')
+
+    sys.path.insert(0, sdkpath)
 
     try:
         clr.AddReference(r'DHI.Generic.MikeZero.DFS')
@@ -70,6 +76,7 @@ def read_dfs0(infile, date, mikepath, tempdir, level):
 
     dfsfile = DHI.Generic.MikeZero.DFS.DfsFileFactory.DfsGenericOpen(dfsfilepath)
     tide_values = []
+
     # read timestep in seconds, convert to minutes
     timestep = int(dfsfile.FileInfo.TimeAxis.TimeStep / 60)
     sdt = dfsfile.FileInfo.TimeAxis.StartDateTime
@@ -93,20 +100,30 @@ def read_dfs0(infile, date, mikepath, tempdir, level):
 
     dfsfile.Dispose()
 
+    if not tide_values:
+        raise ValueError('No tide values generated, recheck AOI')
+
     return tide_values
 
 
 def write_tide_values(infile, date, mikepath, outfile, tempdir, level):
-    """Writes points to new shapefile
+    """Write generated points and tide values to a new shapefile.
 
     Parameters
     ----------
     infile : str
-        File path to dfs0 file.
-    shapefile : str
-        File path to existing point shapefile.
+        Path to AOI polygon.
+    date : datetime.datetime
+        Image acqusition date and time.
+    mikepath : str
+        Path to MIKE installation directory.
     outfile : str
-        File path to output point shapefile.
+        Path to the output file to be created.
+    tempdir : str
+        Path to temporary directory.
+    level : str
+        Click option LAT or MSL.
+
     """
     tide_values = read_dfs0(infile, date, mikepath, tempdir, level)
 
