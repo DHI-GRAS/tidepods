@@ -1,4 +1,4 @@
-name: tidepods222
+name: tidepods
 channels:
     - conda-forge
     - defaults

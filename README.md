@@ -51,12 +51,12 @@ Usage requires MIKE Zero(default: 2016) and the MIKE SDK
 
 After installation, the **tidepods environment** will contain the `tidepods` command-line interface.
 
-1. Activate the **tidepods environment**
+#### 1. Activate the **tidepods environment**
 ```
 activate tidepods
 ```
 
-2. Get information about the `tidepods` CLI with:
+#### 2. Get information about the `tidepods` CLI with:
 ```
 tidepods --help
 ```
