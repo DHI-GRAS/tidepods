@@ -37,6 +37,7 @@ Usage requires MIKE Zero(default: 2016) and the MIKE SDK
 	C:\Program Files (x86)\DHI\2016\MIKE SDK\bin\DHI.Generic.MikeZero.DFS.xml
 	C:\Program Files (x86)\DHI\2016\bin\x64\TidePredictor.exe
 	```
+3. Make sure the MIKE applications have access to a valid license.
 
 ### 4. The tidepods environment
 
