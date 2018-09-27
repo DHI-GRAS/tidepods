@@ -19,13 +19,13 @@ Usage requires MIKE Zero(default: 2016) and the MIKE SDK
 
 ### 2. The GDAL_DATA System Environment Variable
 
-1. Go to 'System Properties' to edit the 'Environment Variables'
+1. Go to `System Properties` to edit the `Environment Variables`
 
-2. Add / verify 'GDAL_DATA' points to 'C:\OSGeo4W64\share\gdal' (assuming standard install of OSGeo4W 64-bit)
+2. Add / verify `GDAL_DATA` points to `C:\OSGeo4W64\share\gdal` (assuming standard install of OSGeo4W 64-bit)
 
 ### 3. MIKE Zero and the MIKE SDK
 
-1. Install [MIKE Zero and the MIKE SDK](https://www.mikepoweredbydhi.com/) (within DHI from winserv). Default install directory is:
+1. Install [MIKE Zero and the MIKE SDK](https://www.mikepoweredbydhi.com/). Default install directory is:
 	```
 	C:\Program Files (x86)\DHI\[YEAR]
 	```
@@ -41,9 +41,8 @@ Usage requires MIKE Zero(default: 2016) and the MIKE SDK
 
 ### 4. The tidepods environment
 
-1. [Download the most recent environment.yml file](https://github.com/DHI-GRAS/tidepods/raw/master/environment.yml) (right-click, 'save-as') and run:
+1. [Download the most recent environment.yml file](https://github.com/DHI-GRAS/tidepods/raw/master/environment.yml) (right-click, `save-as`) and run:
     ```
-    conda config --add channels conda-forge
     conda env create -f /path/to/environment.yml
     ```
    This creates the **tidepods environment**
@@ -107,7 +106,7 @@ Options:
   --help                    Show this message and exit.
 ```
 
-**infile** is a raster or shapefile covering the AOI
+`infile` is a raster or shapefile covering the AOI
 
 <p align="center">
 <img src="https://rawgit.com/DHI-GRAS/tidepods/master/img_src/aoi_bounds.png" width=600px height=600px />
