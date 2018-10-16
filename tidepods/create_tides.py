@@ -131,12 +131,12 @@ def write_tide_values(infile, date, mikepath, outfile, tempdir, level):
 
     pts_schema = {'geometry': 'Point',
                   'properties': {'p_ID': 'int',
-                                 'tide_value': 'float'}}
+                                 str(level): 'float'}}
 
     with fiona.open(outfile, 'w', crs=from_epsg(4326), driver='ESRI Shapefile',
                     schema=pts_schema) as output:
         for pid, (p, tv) in enumerate(zip(plist, tide_values)):
-            prop = {'p_ID': int(pid + 1), 'tide_value': float(tv)}
+            prop = {'p_ID': int(pid + 1), str(level): float(tv)}
             output.write({'geometry': mapping(p), 'properties': prop})
 
 
