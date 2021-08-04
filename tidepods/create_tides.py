@@ -1,45 +1,37 @@
 import datetime
 import os
-import sys
 import tempfile
 
 import fiona
 from fiona.crs import from_epsg
 from shapely.geometry import mapping
 
-from tidepods import generate_pts
-from tidepods import make_pfs
-
-VALID_LEVELS = ['LAT', 'MSL']
+VALID_LEVELS = ["LAT", "MSL"]
 
 
-def read_dfs0(infile, date, mikepath, tempdir, level):
+def tide_values_from_dfs0(mikepath, meta, dfsfilepath, level):
     """Read and extract values from dfs0 file using DHI.Generic.MikeZero.DFS.
 
     Parameters
     ----------
-    infile : str
-        Path to AOI polygon.
-    date : datetime.datetime
-        Image acqusition date and time.
     mikepath : str
         Path to MIKE installation directory.
-    tempdir : str
-        Path to temporary directory.
+    meta : dictionary
+        Metadata dictionary created by read_meta().
+    dfsfilepath : str
+        Path to the dfs file created by make_dfs0().
     level : str
         Click option LAT or MSL.
 
     Returns
     -------
     tide_values : list
-        List of tide values above LAT for image acquisiton date and time.
+        List of tide values for image acquisiton date and time.
 
     Raises
-    -------
+    ------
     ValueError
         If an invalid level type was provided.
-    ValueError
-        If the path to the MIKESDK does not exist.
     ValueError
         If DHI.Generic could not be imported or is not found in the sdkpath folder.
     ValueError
@@ -47,32 +39,27 @@ def read_dfs0(infile, date, mikepath, tempdir, level):
 
     """
     if level not in VALID_LEVELS:
-        raise ValueError(f'Level should be one of {VALID_LEVELS}, not {level}.')
-
-    sdkpath = os.path.join(mikepath, r'MIKE SDK\bin')
-    dfsfilepath = make_pfs.make_dfs0(infile, date, mikepath, tempdir)
+        raise ValueError(f"Level should be one of {VALID_LEVELS}, not {level}.")
 
     import clr
-    clr.AddReference('System')
+
+    clr.AddReference("System")
     import System
 
-    if not os.path.isdir(sdkpath):
-        raise ValueError(f'SDK Path folder not found. Is the path to the sdk correct: "{sdkpath}"?')
-
-    sys.path.insert(0, sdkpath)
-
+    generic_mike_zero_path = list(
+        mikepath.glob("**/Mike SDK/**/*DHI.Generic.MikeZero.DFS.dll")
+    )[0]
     try:
-        clr.AddReference(r'DHI.Generic.MikeZero.DFS')
+        clr.AddReference(str(generic_mike_zero_path))
         import DHI.Generic.MikeZero.DFS
 
     except (ImportError, System.IO.FileNotFoundException) as exception:
-        msg = f'DHI.Generic not found. Is the path to the sdk correct: "{sdkpath}"?'
+        msg = f'DHI.Generic not found. Is the path to the mike installation directory correct: "{mikepath}"?'
         raise ValueError(msg) from exception
 
-    finally:
-        sys.path.pop(0)
-
-    dfs_img_datetime = date
+    dfs_img_datetime = datetime.datetime.strptime(
+        meta["sensing_time"], "%Y-%m-%dT%H:%M:%S"
+    )
 
     dfsfile = DHI.Generic.MikeZero.DFS.DfsFileFactory.DfsGenericOpen(dfsfilepath)
     tide_values = []
@@ -80,64 +67,61 @@ def read_dfs0(infile, date, mikepath, tempdir, level):
     # read timestep in seconds, convert to minutes
     timestep = int(dfsfile.FileInfo.TimeAxis.TimeStep / 60)
     sdt = dfsfile.FileInfo.TimeAxis.StartDateTime
-    dfs_start_datetime = datetime.datetime(*(getattr(sdt, n) for n in ['Year', 'Month', 'Day',
-                                             'Hour', 'Minute', 'Second']))
+    dfs_start_datetime = datetime.datetime(
+        *(getattr(sdt, n) for n in ["Year", "Month", "Day", "Hour", "Minute", "Second"])
+    )
 
     diff = dfs_img_datetime - dfs_start_datetime
     img_timestep = int(((diff.days * 24 * 60) + (diff.seconds / 60)) / timestep)
 
-    for i in range(dfsfile.ItemInfo.Count):
+    for i in range(len(dfsfile.ItemInfo)):
         min_value = float(dfsfile.ItemInfo[i].MinValue)
-        acq_value = dfsfile.ReadItemTimeStep(i + 1, img_timestep).Data[0]  # Value c.f. MSL
+        acq_value = dfsfile.ReadItemTimeStep(i + 1, img_timestep).Data[
+            0
+        ]  # Value c.f. MSL
 
-        if level == 'LAT':
+        if level == "LAT":
             lat_value = acq_value - min_value  # Value above LAT
             tide_values.append(lat_value)
-        elif level == 'MSL':
+        elif level == "MSL":
             tide_values.append(acq_value)
         else:
-            raise ValueError('Invalid level.')
+            raise ValueError("Invalid level.")
 
     dfsfile.Dispose()
 
     if not tide_values:
-        raise ValueError('No tide values generated, recheck AOI')
+        raise ValueError("No tide values generated, recheck AOI")
 
     return tide_values
 
 
-def write_tide_values(infile, date, mikepath, outfile, tempdir, level):
+def write_tide_values(tide_values, plist, level):
     """Write generated points and tide values to a new shapefile.
 
     Parameters
     ----------
-    infile : str
-        Path to AOI polygon.
-    date : datetime.datetime
-        Image acqusition date and time.
-    mikepath : str
-        Path to MIKE installation directory.
-    outfile : str
-        Path to the output file to be created.
-    tempdir : str
-        Path to temporary directory.
+    tide_values : list
+        List of tide values generated by tide_values_from_dfs0().
+    plist : list
+        List of shapely points generated by create_pts().
     level : str
         Click option LAT or MSL.
 
     """
-    tide_values = read_dfs0(infile, date, mikepath, tempdir, level)
+    pts_schema = {
+        "geometry": "Point",
+        "properties": {"p_ID": "int", str(level): "float"},
+    }
 
-    plist = generate_pts.create_pts(infile)
+    mem_file = fiona.MemoryFile()
+    ms = mem_file.open(crs=from_epsg(4326), driver="ESRI Shapefile", schema=pts_schema,)
 
-    pts_schema = {'geometry': 'Point',
-                  'properties': {'p_ID': 'int',
-                                 str(level): 'float'}}
+    for pid, (p, tv) in enumerate(zip(plist, tide_values)):
+        prop = {"p_ID": int(pid + 1), str(level): float(tv)}
+        ms.write({"geometry": mapping(p), "properties": prop})
 
-    with fiona.open(outfile, 'w', crs=from_epsg(4326), driver='ESRI Shapefile',
-                    schema=pts_schema) as output:
-        for pid, (p, tv) in enumerate(zip(plist, tide_values)):
-            prop = {'p_ID': int(pid + 1), str(level): float(tv)}
-            output.write({'geometry': mapping(p), 'properties': prop})
+    return ms
 
 
 def main(infile, date, mikepath, outfile, **kwargs):
