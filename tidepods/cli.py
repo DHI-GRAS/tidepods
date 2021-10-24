@@ -1,5 +1,5 @@
 import click
-
+from datetime import datetime as dt
 
 @click.group()
 def cli():
@@ -83,3 +83,90 @@ def icesat2(**kwargs):
     from tidepods import icesat2
 
     icesat2.main(**kwargs)
+    
+
+
+# Andrea parts
+
+class TimeType(click.ParamType):
+    name = 'time'
+
+    def convert(self, time, _, __):
+        try:
+            return dt.strptime(time, "%H:%M").time()
+        except ValueError as exception:
+            msg = "Not a valid timestamp: '{0}'.".format(time)
+            raise ValueError(msg) from exception
+
+
+class DateType(click.ParamType):
+    name = 'date'
+
+    def convert(self, date, _, __):
+        try:
+            return dt.strptime(date, "%Y%m%d").date()
+        except ValueError as exception:
+            msg = "Not a valid date: '{0}'.".format(date)
+            raise ValueError(msg) from exception
+
+
+TIMEIN = TimeType()
+DATEIN = DateType()
+
+
+@cli.command()
+@click.option(
+    "-i",
+    "--infile",
+    type=click.Path(dir_okay=False, file_okay=True),
+    required=True,
+    help="Path to AOI raster (.tif) or shapefile for points creation e.g. C:/tides/aoi.tif",
+)
+@click.option(
+    "-d", 
+    "--date",
+    type=DATEIN,
+    required=False,
+    help="Image acquisiton date (yyyymmdd) e.g. 20150131",
+)
+@click.option(
+    "-t",
+    "--timestamp",
+    type=TIMEIN,
+    required=False,
+    help="Image acquisition time (HH:MM) e.g. 10:30",
+)
+@click.option(
+    "-o",
+    "--outfolder",
+    type=click.Path(dir_okay=True, file_okay=False),
+    required=False,
+    help="Path to output points shapefile containing the tidal values e.g. C:/tides",
+)
+@click.option(
+    "-l",
+    "--level",
+    type=click.Choice(["LAT", "MSL"]),
+    required=True,
+    help="Tide value return type, LAT (Lowest Astronomical Tide) "
+    "or MSL (Mean Sea Level)",
+)
+@click.option(
+    "-r",
+    "--resolution",
+    type=float,
+    required=False,
+    help="Resolution of tif file ",    
+    
+)
+
+def vhr(**kwargs):
+    """Create a point shp containing tide values over AOI (VHR image).
+    
+    Example use:
+    tidepods points -p "C:/Program Files (x86)/DHI/2016/MIKE SDK/bin" -i C:/tides/aoi.tif
+    -d 20150131 -t 10:30 -o C:/tides/pts_tides.shp
+    """
+    from tidepods import vhr_imdfile
+    vhr_imdfile.main(**kwargs)
+    
