@@ -12,17 +12,19 @@ Usage requires MIKE Zero(default: 2021) and the MIKE SDK
    If you already have Anaconda or Miniconda installed, you can skip this step.
 
 
-2. Install [MIKE Zero and the MIKE SDK](https://www.mikepoweredbydhi.com/). This version of tidepods has been tested and works with the 2021 versions of MIKE. Default install directory is:
+2. Install [MIKE Zero](https://www.mikepoweredbydhi.com/download/mike-2021/mike-11?ref={2BC171FE-7AFA-44A0-9BF8-BC48CEAC27A8}) and the [MIKE SDK](https://www.mikepoweredbydhi.com/download/mike-2021/mike-sdk?ref=%7b2BC171FE-7AFA-44A0-9BF8-BC48CEAC27A8%7d&download=1&os=x32&c=us). 
+3. Install [The Mike SDK Tide Constituents](https://www.dhigroup.com/download/mike-by-dhi-tools/coastandseatools/global-tide-model), the dowloaded file needs to be placed in the Tide_Constituents folder. Default being `C:\Program Files (x86)\DHI\MIKE Zero\2021\Application Data\Tide_Constituents`
+4. This version of tidepods has been tested and works with the 2021 versions of MIKE. Default install directory is:
 	```
 	C:\Program Files (x86)\DHI\2021
 	```
-2. Ensure MIKE Zero and the MIKE SDK are installed. Tidepods relies on certain files within these directories, thus the installation directory tree needs to be consistent. Default installation locations are:
+5. Ensure MIKE Zero and the MIKE SDK are installed. Tidepods relies on certain files within these directories, thus the installation directory tree needs to be consistent. Default installation locations are:
 	```
 	C:\Program Files (x86)\DHI\Mike SDK\2021
 	C:\Program Files (x86)\DHI\Mike Zero\2021
 	```
-3. Make sure the MIKE applications have access to a valid license.
-4. Add the root MIKE installation directory to the environment variables, naming it "MIKE" e.g.:
+6. Make sure the MIKE applications have access to a valid license.
+7. Add the root MIKE installation directory to the environment variables, naming it "MIKE" e.g.:
 	```
 	Variable: MIKE
 	Value: C:\Program Files (x86)\DHI\
