@@ -1,45 +1,34 @@
 # tidepods
 
-Extract gridded tide values from MIKE for a given area of interest
+Extract gridded tide values from MIKE for a given area of interest and create a tidal surface.
 
-Usage requires MIKE Zero(default: 2016) and the MIKE SDK
+Usage requires MIKE Zero(default: 2021) and the MIKE SDK
 
 ## Installation
 
-### 1. Miniconda Python
+### 1. Setup
 
 1. Download and install [Miniconda](https://conda.io/miniconda.html) (Python 3).
    If you already have Anaconda or Miniconda installed, you can skip this step.
 
-2. Make sure that Miniconda is in the system environment variables under Path. Commonly under:
-    ```
-    C:\Users\<USER>\AppData\Local\Continuum\miniconda3\Scripts
-    C:\Users\<USER>\AppData\Local\Continuum\miniconda3
-    ```
 
-### 2. The GDAL_DATA System Environment Variable
-
-1. Go to `System Properties` to edit the `Environment Variables`
-
-2. Add / verify `GDAL_DATA` points to `C:\OSGeo4W64\share\gdal` (assuming standard install of OSGeo4W 64-bit)
-
-### 3. MIKE Zero and the MIKE SDK
-
-1. Install [MIKE Zero and the MIKE SDK](https://www.mikepoweredbydhi.com/). Default install directory is:
+2. Install [MIKE Zero and the MIKE SDK](https://www.mikepoweredbydhi.com/). This version of tidepods has been tested and works with the 2021 versions of MIKE. Default install directory is:
 	```
-	C:\Program Files (x86)\DHI\[YEAR]
+	C:\Program Files (x86)\DHI\2021
 	```
-2. Ensure MIKE Zero and the MIKE SDK are installed. Tidepods relies on the following files being installed (assuming default installation location):
+2. Ensure MIKE Zero and the MIKE SDK are installed. Tidepods relies on certain files within these directories, thus the installation directory tree needs to be consistent. Default installation locations are:
 	```
-	C:\Program Files (x86)\DHI\2016\MIKE Zero\Application Data\Tide_Constituents\global_tide_constituents_0.125deg.dfs2
-	C:\Program Files (x86)\DHI\2016\MIKE Zero\Application Data\Tide_Constituents\prepack.dat
-	C:\Program Files (x86)\DHI\2016\MIKE SDK\bin\DHI.PFS.dll
-	C:\Program Files (x86)\DHI\2016\MIKE SDK\bin\DHI.Generic.MikeZero.DFS.xml
-	C:\Program Files (x86)\DHI\2016\bin\x64\TidePredictor.exe
+	C:\Program Files (x86)\DHI\Mike SDK\2021
+	C:\Program Files (x86)\DHI\Mike Zero\2021
 	```
 3. Make sure the MIKE applications have access to a valid license.
+4. Add the root MIKE installation directory to the environment variables, naming it "MIKE" e.g.:
+	```
+	Variable: MIKE
+	Value: C:\Program Files (x86)\DHI\
+	```
 
-### 4. The tidepods environment
+### 2. The tidepods environment
 
 1. [Download the most recent environment.yml file](https://github.com/DHI-GRAS/tidepods/raw/master/environment.yml) (right-click, `save-as`) and run:
     ```
@@ -63,57 +52,44 @@ tidepods --help
 ```
 Usage: tidepods [OPTIONS] COMMAND [ARGS]...
 
-  Tidal Surface Processing Tasks
+  Tidal Surface Processing Tasks.
 
 Options:
   --help  Show this message and exit.
 
 Commands:
-  points  Create a point shapefile containing tide...
+  icesat2  Extract tide levels at icesat_2 acquisition points.
+  s2       Create a tidal surface for a Sentinel 2 acquisition.
+  vhr      Create a point shp containing tide values over AOI (VHR image).
 ```
 
 ### Individual Commands
 
-The individual commands available within tidepods are: `points`
+The individual commands available within tidepods are: `icesat2, s2, vhr`
+e.g. 
+```
+tidepods icesat2 --help
+```
+```
+Usage: tidepods icesat2 [OPTIONS]
 
-```
-tidepods points --help
-```
-```
-Usage: tidepods points [OPTIONS]
-
-  Create a point shapefile containing tide values over an AOI
+  Extract tide levels at icesat_2 acquisition points.
 
   Example use:
 
-  tidepods points -p "C:/Program Files (x86)/DHI/2016/MIKE SDK/bin" -i
-  C:/tides/aoi.tif -d 20150131 -t 10:30 -o C:/tides/pts_tides.shp
+  tidepods icesat2 -s C:/tides/processed_icesat_pts.shp -o C:/tides_output
+  -l MSL
 
 Options:
-  -i, --infile PATH         Path to AOI raster file for points creation e.g.
-                            C:/tides/aoi.tif  [required]
-  -d, --date DATE           Image acquisiton date (yyyymmdd) e.g. 20150131
-                            [required]
-  -t, --timestamp TIME      Image acquisition time (HH:MM) e.g. 10:30
-                            [required]
-  -o, --outfile PATH        Path to output points shapefile containing the
-                            tidal values e.g. C:/tides/pts_tides.shp
-                            [required]
-  -l, --level [LAT|MSL]     Tide value return type, LAT (Lowest Astronomical
-                            Tide) or MSL (Mean Sea Level)  [required]
-  -p, --mikepath DIRECTORY  Path to DHI MIKE version install root directory
-                            [default: C:\Program Files (x86)\DHI\2016]
-  --help                    Show this message and exit.
+  -s, --shapefile FILE       Path to input shapefile e.g.
+                             C:/tides/processed_icesat_pts.shp  [required]
+
+  -o, --outfolder DIRECTORY  Path to output folder where tidepods will create
+                             the updated shapefile e.g. C:/tides  [required]
+
+  -l, --level [LAT|MSL]      Tide value return type, LAT (Lowest Astronomical
+                             Tide) or MSL (Mean Sea Level)  [required]
+
+  --help                     Show this message and exit.
 ```
 
-`infile` is a raster or shapefile covering the AOI
-
-<p align="center">
-<img src="https://rawgit.com/DHI-GRAS/tidepods/master/img_src/aoi_bounds.png" width=600px height=600px />
-</p>
-
-Points are then generated at every 0.125 degrees covering the AOI, plus a 0.125 degree buffer. These contain the tide level (MSL or LAT depending on the user input)
-
-<p align="center">
-<img src="https://rawgit.com/DHI-GRAS/tidepods/master/img_src/points.png" width=600px height=600px />
-</p>
