@@ -33,7 +33,7 @@ Usage requires MIKE Zero(default: 2021) and the MIKE SDK
 9. If you get an error: "TypeError: expected str, bytes or os.PathLike object, not NoneType" , try to activate env (activate tidepods) and set up the path:
 
 ```
-set MIKE=C:\Program Files (x86)\DHI\2021
+set MIKE=C:\Program Files (x86)\DHI
 ```
 
 
