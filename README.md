@@ -29,12 +29,13 @@ Usage requires MIKE Zero(default: 2021) and the MIKE SDK
 	Variable: MIKE
 	Value: C:\Program Files (x86)\DHI\
 	```
-8. If you get an error: "TypeError: expected str, bytes or os.PathLike object, not NoneType" try to set up the path:
+8. Rename the folder "C:\Program Files (x86)\DHI\Mike Core SDK\2021" --> "C:\Program Files (x86)\DHI\Mike SDK\2021"	
+9. If you get an error: "TypeError: expected str, bytes or os.PathLike object, not NoneType" , try to activate env (activate tidepods) and set up the path:
 
 ```
 set MIKE=C:\Program Files (x86)\DHI\2021
 ```
-and rename the folder "C:\Program Files (x86)\DHI\Mike Core SDK\2021" --> C:\Program Files (x86)\DHI\Mike SDK\2021
+
 
 ### 2. The tidepods environment
 
