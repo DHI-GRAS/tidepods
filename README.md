@@ -29,6 +29,8 @@ Usage requires MIKE Zero(default: 2021) and the MIKE SDK
 	Variable: MIKE
 	Value: C:\Program Files (x86)\DHI\
 	```
+8. Try to restart your pc due to the environment variables
+
 
 ### 2. The tidepods environment
 
