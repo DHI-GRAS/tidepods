@@ -260,8 +260,8 @@ def tide_values_from_dfs0(mikepath, pts, dfsfilepath, level):
 
 def main(shapefile, outfolder, level):
 
-    mikepath = os.environ['MIKE'] = "C:\Program Files (x86)\DHI"
-    #ikepath = os.environ.get['MIKE']
+    # mikepath = os.environ['MIKE'] = "C:\Program Files (x86)\DHI"
+    mikepath = os.environ.get("MIKE")
     mikepath = pathlib.Path(mikepath)
 
     if not os.path.isdir(outfolder):

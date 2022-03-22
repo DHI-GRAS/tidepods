@@ -4,6 +4,7 @@ Created on Tue Apr 13 10:57:13 2021
 
 @author: vlro
 """
+import pathlib as Path
 import pathlib
 import xml.etree.ElementTree as ET
 import numpy as np
@@ -446,8 +447,10 @@ def write_tide_values(tide_values, plist, level, outfile, outfolder):
 
     mem_file = fiona.MemoryFile()
     ms = mem_file.open(crs=from_epsg(4326), driver="ESRI Shapefile", schema=pts_schema,)
-   
-    out_name_points = outfile.split('\\')[-1][:-4]+'.shp'
+
+    # out_name_points = outfile.split('\\')[-1][:-4]+'.shp'
+    outfile_path = Path(outfile)
+    out_name_points = outfile_path.stem + '.shp'
 
     for pid, (p, tv) in enumerate(zip(plist, tide_values)):
         prop = {"p_ID": int(pid + 1), str(level): float(tv)}
@@ -613,11 +616,10 @@ def main(safe, outfolder, level, landmask=None):
         os.makedirs(outfolder)
 
 
-    mikepath = os.environ['MIKE'] = "C:\Program Files (x86)\DHI"
-    #ikepath = os.environ.get['MIKE']
+    # mikepath = os.environ['MIKE'] = "C:\Program Files (x86)\DHI"
+    mikepath = os.environ.get("MIKE")
     mikepath = pathlib.Path(mikepath)
 
-    # mikepath = os.environ.get("MIKE")
     metafile = list(pathlib.Path(safe).glob("**/MTD_TL.xml"))[0]
     meta = read_meta(metafile)
     dst_profile = make_profile(meta)

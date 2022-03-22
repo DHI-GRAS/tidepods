@@ -114,7 +114,7 @@ def make_ds_array(profile):
     return ds
 
 
-def get_dataset_outline(dataset, profile, target_epsg=4326, buffer=0.125):
+def get_dataset_outline(dataset, profile, target_epsg=4326, buffer=0.5):
     """
     Get the outline of the input raster dataset, reporject and buffer if wanted.
 
@@ -615,6 +615,8 @@ def main(infile, level, outfolder = None, resolution= None, date=None, timestamp
   
     mikepath = os.environ['MIKE'] = "C:\Program Files (x86)\DHI"
     #ikepath = os.environ.get['MIKE']
+    mikepath = os.environ['MIKE'] = "C:\Program Files (x86)\DHI"
+    mikepath = os.environ.get("MIKE")
     mikepath = pathlib.Path(mikepath)
     
     dst_profile = make_profile(meta)

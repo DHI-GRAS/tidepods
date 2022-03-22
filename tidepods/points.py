@@ -594,8 +594,8 @@ def main(infile, level, outfolder = None, resolution= None, date=None, timestamp
         os.makedirs(outfolder)
      
     
-    mikepath = os.environ['MIKE'] = "C:\Program Files (x86)\DHI"
-    #ikepath = os.environ.get['MIKE']
+    # mikepath = os.environ['MIKE'] = "C:\Program Files (x86)\DHI"
+    mikepath = os.environ.get("MIKE")
     mikepath = pathlib.Path(mikepath)
     
     dst_profile = make_profile(meta)

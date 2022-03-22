@@ -5,6 +5,7 @@ Created on March 13 2022
 @autor: ansu
 """
 import pathlib
+from pathlib import Path
 import xml.etree.ElementTree as ET
 import numpy as np
 from affine import Affine
@@ -27,6 +28,7 @@ from datetime import datetime as dt
 import mikeio
 from mikeio import Dfs0, Dataset
 
+# import ipdb; ipdb.set_trace()
 
 
 def read_meta(infile):
@@ -439,8 +441,10 @@ def write_tide_values(tv_MSL,tv_LAT,tv_HAT, plist, outfile, outfolder):
                        "LAT": "float", "HAT": "float"}}
     mem_file = fiona.MemoryFile()
     ms = mem_file.open(crs=from_epsg(4326), driver="ESRI Shapefile", schema=pts_schema)
-    out_name_points = outfile.split('\\')[-1][:-4]+'.shp'
 
+    # out_name_points = outfile.split('\\')[-1][:-4]+'.shp'
+    outfile_path = Path(outfile)
+    out_name_points = outfile_path.stem + '.shp'
 
     for pid, (p, tv_MSLL,tv_LATT,tv_HATT) in enumerate(zip(plist, tv_MSL,tv_LAT,tv_HAT)):
         prop = {"p_ID": int(pid + 1), "MSL": float(tv_MSLL),
@@ -565,14 +569,11 @@ def main(infile, outfolder = None, date=None, timestamp=None):
         Path to the vht image file.
     outfolder : String
         Path to the output folder. This will be created if it does not exist.
-    land_mask : String, optional
-        Path to the land mask to be applied. The default is None.
 
     Returns
     -------
     None.
     """
-
   
     if outfolder is None:
         outfolder = pathlib.Path(infile).parent
