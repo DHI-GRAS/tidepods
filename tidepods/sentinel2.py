@@ -121,7 +121,7 @@ def make_ds_array(profile):
     return ds
 
 
-def get_dataset_outline(dataset, profile, target_epsg=4326, buffer=0.125):
+def get_dataset_outline(dataset, profile, target_epsg=4326, buffer=2):
     """
     Get the outline of the input raster dataset, reporject and buffer if wanted.
 
@@ -153,6 +153,7 @@ def get_dataset_outline(dataset, profile, target_epsg=4326, buffer=0.125):
 
     if target_epsg is None:
         shp = box(left, bottom, right, top)
+        
 
     else:
         out_crs = rasterio.crs.CRS.from_epsg(target_epsg)
@@ -194,13 +195,14 @@ def create_pts(shp, spacing):
         for y in np.arange(miny + offset, maxy - offset, spacing):
             p = Point(x, y)
             if p.within(shp):
-                plist.append(p)
+                plist.append(p) 
 
     if not plist:
         raise ValueError(
             "No points generated. Is the input file covering a large enough AOI?"
         )
-
+  
+   
     return plist
 
 
@@ -228,8 +230,8 @@ def generate_pfs(pts, meta, mikepath, tempdir):
     """
     date = datetime.datetime.strptime(meta["sensing_time"], "%Y-%m-%dT%H:%M:%S")
     temppfs = os.path.join(tempdir, "temp.pfs")
-
     dhi_pfs_path = list(mikepath.glob("**/Mike SDK/**/*DHI.PFS.dll"))[0]
+   
     constituents_path = list(
         mikepath.glob("**/global_tide_constituents_height_0.125deg.dfs2")
     )[0]
@@ -419,7 +421,7 @@ def tide_values_from_dfs0(mikepath, meta, dfsfilepath, level):
     return tide_values
 
 
-def write_tide_values(tide_values, plist, level):
+def write_tide_values(tide_values, plist, level, outfile, outfolder):
     """Write generated points and tide values to a new shapefile.
 
     Parameters
@@ -444,11 +446,21 @@ def write_tide_values(tide_values, plist, level):
 
     mem_file = fiona.MemoryFile()
     ms = mem_file.open(crs=from_epsg(4326), driver="ESRI Shapefile", schema=pts_schema,)
+   
+    out_name_points = outfile.split('\\')[-1][:-4]+'.shp'
 
     for pid, (p, tv) in enumerate(zip(plist, tide_values)):
         prop = {"p_ID": int(pid + 1), str(level): float(tv)}
         ms.write({"geometry": mapping(p), "properties": prop})
+    
+    
+    with fiona.open(outfile, 'w', crs=from_epsg(4326), driver='ESRI Shapefile',
+                    schema=pts_schema) as output:
+        for pid, (p, tv) in enumerate(zip(plist, tide_values)):
+            prop = {"p_ID": int(pid + 1), str(level): float(tv)}
+            output.write({"geometry": mapping(p), "properties": prop})
 
+    
     return ms
 
 
@@ -570,7 +582,7 @@ def write_raster(src_array, src_profile, dst_array, dst_profile, outfile):
         dst_transform=dst_profile["transform"],
         dst_crs=dst_profile["crs"],
         dst_nodata=None,
-        resampling=3,
+        resampling=0,
     )[0]
 
     with rasterio.open(outfile, "w", **dst_profile) as dst:
@@ -600,8 +612,12 @@ def main(safe, outfolder, level, landmask=None):
     if not os.path.isdir(outfolder):
         os.makedirs(outfolder)
 
-    mikepath = os.environ.get("MIKE")
+
+    mikepath = os.environ['MIKE'] = "C:\Program Files (x86)\DHI"
+    #ikepath = os.environ.get['MIKE']
     mikepath = pathlib.Path(mikepath)
+
+    # mikepath = os.environ.get("MIKE")
     metafile = list(pathlib.Path(safe).glob("**/MTD_TL.xml"))[0]
     meta = read_meta(metafile)
     dst_profile = make_profile(meta)
@@ -619,8 +635,15 @@ def main(safe, outfolder, level, landmask=None):
 
     temp_dfs0_path = str(list(pathlib.Path(tempfolder).glob("*.dfs0"))[0])
     tv = tide_values_from_dfs0(mikepath, meta, temp_dfs0_path, level)
-    c = write_tide_values(tv, pts, level)
+
+
+    outfilename = ".".join([meta["tile_id"], "tides", level, "shp"])
+    outfile = os.path.join(outfolder, outfilename)
+
+    c = write_tide_values(tv, pts, level, outfile, outfolder)
+
     src_array, src_profile = rasterize_points(c, shp)
+
 
     if not landmask:
         src_array, src_profile = rasterize_points(c, shp)
@@ -629,7 +652,7 @@ def main(safe, outfolder, level, landmask=None):
         src_array = mask_raster(unmasked_a, unmasked_p, shp, landmask=landmask)
         src_profile = unmasked_p
 
-    outfilename = ".".join([meta["tile_id"], "tides", level, "tif"])
+    outfilename = ".".join([meta["tile_id"], "tides_resampling_2", level, "tif"])
     outfile = os.path.join(outfolder, outfilename)
 
     write_raster(src_array, src_profile, dst_array, dst_profile, outfile)

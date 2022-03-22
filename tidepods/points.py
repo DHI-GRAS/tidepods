@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Oct 22 10:57:13 2021
+Created on March 13 2022
 
-@author: vlro 
-@editor: ansu
+@autor: ansu
 """
 import pathlib
 import xml.etree.ElementTree as ET
@@ -29,7 +28,7 @@ VALID_LEVELS = ["LAT", "MSL"]
 
 def read_meta(infile):
     """
-    Read metadata xml file of Sentinel 2 tile.
+    Read the shape of AOI
 
     Parameters
     ----------
@@ -114,7 +113,7 @@ def make_ds_array(profile):
     return ds
 
 
-def get_dataset_outline(dataset, profile, target_epsg=4326, buffer=0.125):
+def get_dataset_outline(dataset, profile, target_epsg=4326, buffer= 1):
     """
     Get the outline of the input raster dataset, reporject and buffer if wanted.
 
@@ -414,7 +413,7 @@ def tide_values_from_dfs0(mikepath, meta, dfsfilepath, level, date):
     return tide_values
 
 
-def write_tide_values(tide_values, plist, level):
+def write_tide_values(tide_values, plist, level, outfile, outfolder):
     """Write generated points and tide values to a new shapefile.
 
     Parameters
@@ -439,13 +438,22 @@ def write_tide_values(tide_values, plist, level):
 
     mem_file = fiona.MemoryFile()
     ms = mem_file.open(crs=from_epsg(4326), driver="ESRI Shapefile", schema=pts_schema,)
+   
+    out_name_points = outfile.split('\\')[-1][:-4]+'.shp'
 
     for pid, (p, tv) in enumerate(zip(plist, tide_values)):
         prop = {"p_ID": int(pid + 1), str(level): float(tv)}
         ms.write({"geometry": mapping(p), "properties": prop})
+    
+    
+    with fiona.open(outfile, 'w', crs=from_epsg(4326), driver='ESRI Shapefile',
+                    schema=pts_schema) as output:
+        for pid, (p, tv) in enumerate(zip(plist, tide_values)):
+            prop = {"p_ID": int(pid + 1), str(level): float(tv)}
+            output.write({"geometry": mapping(p), "properties": prop})
 
+    
     return ms
-
 
 def rasterize_points(pc, shp):
     """
@@ -500,37 +508,6 @@ def rasterize_points(pc, shp):
     return image, profile
 
 
-def mask_raster(image, profile, shp, landmask):
-    """
-    Mask the output tides raster with the land mask.
-
-    Parameters
-    ----------
-    image : Array
-        The image array created by rasterize_points().
-    profile : Dictionary
-        The dictionary profile created by rasterize_points().
-    shp : Shapely shape
-        Shapely polygon as created by get_dataset_outline().
-    landmask : String
-        Path to the land mask shapefile.
-
-    Returns
-    -------
-    out_image : Array
-        Masked image array.
-
-    """
-    with fiona.open(landmask) as msk:
-        shapes = [f["geometry"] for f in msk if shape(f["geometry"]).within(shp)]
-    with MemoryFile() as memfile:
-        with memfile.open(**profile) as ds:
-            ds.write(image)
-            out_image, out_transform = rasterio.mask.mask(
-                ds, shapes, invert=True, crop=False
-            )
-
-    return out_image
 
 def write_raster(src_array, src_profile, dst_array, dst_profile, outfile):
     """
@@ -564,16 +541,16 @@ def write_raster(src_array, src_profile, dst_array, dst_profile, outfile):
         dst_transform=dst_profile["transform"],
         dst_crs=dst_profile["crs"],
         dst_nodata=None,
-        resampling=2,
+        resampling=3,
     )[0]
 
     with rasterio.open(outfile, "w", **dst_profile) as dst:
         dst.write(dst_image)
 
-
-def main(infile, level, outfolder = None, resolution= None, date=None, timestamp=None,landmask=None):
+def main(infile, level, outfolder = None, resolution= None, date=None, timestamp=None):
+  
     """
-    Run main function to run the Sentinel 2 command.
+    Run main function to run the points command.
 
     Parameters
     ----------
@@ -590,29 +567,33 @@ def main(infile, level, outfolder = None, resolution= None, date=None, timestamp
     -------
     None.
     """
+    
+  
     if outfolder is None:
         outfolder = pathlib.Path(infile).parent
         print("\nOutfolder:", outfolder)    
     else:
         outfolder = outfolder  
-    
+   
     meta = read_meta(infile)
+
+  
         
     if date is None and timestamp is None:
         imdfile = list(pathlib.Path(infile).parent.glob("*.imd"))[0]
         indate  = "20"+imdfile.name[0:13]
         date = datetime.datetime.strptime(indate, "%Y%b%d%H%M%S")
-        print("Date is taken from the .imd file:", date, "Resolution:", meta["resolution"],"m")    
+        print("\nDate is taken from the .imd file:", date, "Resolution:", meta["resolution"],"m")    
     else:
         indate = date
         date = datetime.datetime.combine(date, timestamp)
-        print("Date:", date, "Resolution:", meta["resolution"],"m\n") 
+        print("\nDate:", date, "Resolution:", meta["resolution"],"m\n") 
 
     if not os.path.isdir(outfolder):
         print(os.path.isdir(outfolder))
         os.makedirs(outfolder)
      
-  
+    
     mikepath = os.environ['MIKE'] = "C:\Program Files (x86)\DHI"
     #ikepath = os.environ.get['MIKE']
     mikepath = pathlib.Path(mikepath)
@@ -634,19 +615,14 @@ def main(infile, level, outfolder = None, resolution= None, date=None, timestamp
 
     temp_dfs0_path = str(list(pathlib.Path(tempfolder).glob("*.dfs0"))[0])
     tv = tide_values_from_dfs0(mikepath, meta, temp_dfs0_path, level, date)
-    c = write_tide_values(tv, pts, level)
-    src_array, src_profile = rasterize_points(c, shp)
 
-    if not landmask:
-        src_array, src_profile = rasterize_points(c, shp)
-    else:
-        unmasked_a, unmasked_p = rasterize_points(c, shp)
-        src_array = mask_raster(unmasked_a, unmasked_p, shp, landmask=landmask)
-        src_profile = unmasked_p
-
-    outfilename = ".".join(["tides_resampling_2_old125",str(indate), level, "tif"])
+    outfilename = ".".join(["tides",str(indate), level, "shp"])
     outfile = os.path.join(outfolder, outfilename)
-
-    write_raster(src_array, src_profile, dst_array, dst_profile, outfile)
+    
+    c = write_tide_values(tv, pts, level, outfile, outfolder)
+    src_array, src_profile = rasterize_points(c, shp)
+    
+    print("The file is located:", outfile)
+    # write_raster(src_array, src_profile, dst_array, dst_profile, outfile)
 
     shutil.rmtree(tempfolder)
