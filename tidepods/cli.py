@@ -42,8 +42,8 @@ def s2(**kwargs):
 
     Example use:
 
-    tidepods s2 -s A:/user/6_Tasks/_SDB_Tidepods/tidepods-ansu_TestFile/S2/S2B_MSIL1C_20210307T074749_N0209_R135_T37QDE_20210307T100607.SAFE 
-    -l MSL -o A:/user/6_Tasks/_SDB_Tidepods/tidepods-ansu_TestFile/S2
+    tidepods s2 -s C:/path-to-sentinel-folder/S2B_MSIL1C_XXX.SAFE 
+    -l MSL -o C:/user/path-to-output-folder/
     
     """
     from tidepods import sentinel2
@@ -80,8 +80,8 @@ def icesat2(**kwargs):
 
     Example use:
 
-    tidepods icesat2 -s A:/user/6_Tasks/_SDB_Tidepods/tidepods-ansu_TestFile/ICESat-2/Tidepods_A.shp
-     -l MSL -o A:/user/6_Tasks/_SDB_Tidepods/tidepods-ansu_TestFile/ICESat-2/
+    tidepods icesat2 -s A:/user/path-to-shapefile-folder/ICESat-2/Tidepods.shp
+     -l MSL -o A:/user/path-to-output-folder/ICESat-2/Tidepods.shp
 
     """
     from tidepods import icesat2
@@ -168,7 +168,7 @@ def vhr(**kwargs):
     """Create a point shp containing tide values over AOI (VHR image).
     
     Example use:
-    tidepods vhr -i A:/user/6_Tasks/_SDB_Tidepods/tidepods-ansu_TestFile/VHR/test_1/AOI.tif -d 20200815 -t 15:45 -l MSL
+    tidepods vhr -i A:/user/path-to-vhrfile/vhr.tif -d 20200815 -t 15:45 -l MSL
     """
     from tidepods import vhr_imdfile
     vhr_imdfile.main(**kwargs)
@@ -200,8 +200,8 @@ def points(**kwargs):
     """Create a point shapefile containing tide values over an AOI
 
     Example use:
-    tidepods points -i A:/user/6_Tasks/_SDB_Tidepods/tidepods-ansu_TestFile/points/mosaic.tif -l MSL 
-    -o A:/user/6_Tasks/_SDB_Tidepods/tidepods-ansu_TestFile/points/mosaic_MSL.shp -d 20200407 -t 10:40
+    tidepods points -i A:/user/path-to-tif-file/mosaic.tif -l MSL 
+    -o A:/user/path-to-output-folder/points.shp -d 20200407 -t 10:40
 
     """
 
@@ -233,8 +233,8 @@ def timeseries(**kwargs):
     rasters containg MSL, HAT and LAT tide values.
 
     Example use:
-    tidepods timeseries -i A:/ANSU/6_Tasks/_SDB_Tidepods/tidepods-ansu_TestFile/timeseries/AOI.tif  
-    -o A:/ANSU/6_Tasks/_SDB_Tidepods/tidepods-ansu_TestFile/timeseries -d 20200407 -t 10:40
+    tidepods timeseries -i A:/user/path-to-tif-file/AOI.tif  
+    -o A:/user/path-to-output-folder/timeseries -d 20200407 -t 10:40
 
     """
 

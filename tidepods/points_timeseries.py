@@ -28,6 +28,7 @@ from datetime import datetime as dt
 import mikeio
 from mikeio import Dfs0, Dataset
 
+
 # import ipdb; ipdb.set_trace()
 
 
@@ -442,7 +443,6 @@ def write_tide_values(tv_MSL,tv_LAT,tv_HAT, plist, outfile, outfolder):
     mem_file = fiona.MemoryFile()
     ms = mem_file.open(crs=from_epsg(4326), driver="ESRI Shapefile", schema=pts_schema)
 
-    # out_name_points = outfile.split('\\')[-1][:-4]+'.shp'
     outfile_path = Path(outfile)
     out_name_points = outfile_path.stem + '.shp'
 
@@ -479,7 +479,7 @@ def rasterize_points(pc, shp):
         Dictionary of the updated profile.
 
     """
-    pc.mode = "r"  # set collection mode to read
+    pc.mode = "r"  
 
 
     # transform for the target raster, hardcoded 0.125 deg resoution as
@@ -596,8 +596,7 @@ def main(infile, outfolder = None, date=None, timestamp=None):
         os.makedirs(outfolder)
      
     
-    mikepath = os.environ['MIKE'] = "C:\Program Files (x86)\DHI"
-    #ikepath = os.environ.get['MIKE']
+    mikepath = os.environ.get['MIKE']
     mikepath = pathlib.Path(mikepath)
     
     dst_profile = make_profile(meta)

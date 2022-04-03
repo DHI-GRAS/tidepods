@@ -616,7 +616,6 @@ def main(safe, outfolder, level, landmask=None):
         os.makedirs(outfolder)
 
 
-    # mikepath = os.environ['MIKE'] = "C:\Program Files (x86)\DHI"
     mikepath = os.environ.get("MIKE")
     mikepath = pathlib.Path(mikepath)
 
