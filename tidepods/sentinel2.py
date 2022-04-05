@@ -4,8 +4,9 @@ Created on Tue Apr 13 10:57:13 2021
 
 @author: vlro
 """
-import pathlib as Path
+
 import pathlib
+from pathlib import Path
 import xml.etree.ElementTree as ET
 import numpy as np
 from affine import Affine
