@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Apr 13 10:57:13 2021
+Created on March 13 2022
 
-@author: vlro
+@autor: ansu
 """
-import pathlib as Path
 import pathlib
 import xml.etree.ElementTree as ET
 import numpy as np
@@ -19,15 +18,17 @@ import rasterio
 from rasterio import features
 import shutil
 from rasterio.io import MemoryFile
+from rasterio.transform import Affine
 import rasterio.warp
 import rasterio.mask
+from datetime import datetime as dt
 
 VALID_LEVELS = ["LAT", "MSL"]
 
 
-def read_meta(metafile):
+def read_meta(infile):
     """
-    Read metadata xml file of Sentinel 2 tile.
+    Read the shape of AOI
 
     Parameters
     ----------
@@ -40,31 +41,19 @@ def read_meta(metafile):
         Dictionary of relevant metadata used to create the tide surface.
 
     """
-    root = ET.parse(metafile).getroot()
     meta = {}
-
-    # get raster tile_id
-    meta["tile_id"] = [x.text for x in root.iter("TILE_ID")][0]
-    # get raster sensing time
-    meta["sensing_time"] = [x.text for x in root.iter("SENSING_TIME")][0][0:19]
-
-    # get raster epsg
-    meta["epsg"] = [x.text for x in root.iter("HORIZONTAL_CS_CODE")][0]
-
-    # get raster shape
-    for x in root.iter("Size"):
-        if x.attrib["resolution"] == "10":
-            meta["nrows"] = float(x.find("NROWS").text)
-            meta["ncols"] = float(x.find("NCOLS").text)
-
-    # get raster geoposition for affine transform
-    for x in root.iter("Geoposition"):
-        if x.attrib["resolution"] == "10":
-            meta["ulx"] = float(x.find("ULX").text)
-            meta["uly"] = float(x.find("ULY").text)
-            meta["xdim"] = float(x.find("XDIM").text)
-            meta["ydim"] = float(x.find("YDIM").text)
-
+    
+    dataset = rasterio.open(infile)
+    meta["ncols"], meta["nrows"] = dataset.shape
+    meta["epsg"] = dataset.crs
+   
+    transform = dataset.transform
+    meta["resolution"] = float(transform[0])
+    meta["ulx"] = float(transform[2])
+    meta["uly"] = float(transform[5])
+    meta["xdim"] = float(transform[0])
+    meta["ydim"] = float(transform[4])    
+    
     return meta
 
 
@@ -83,6 +72,8 @@ def make_profile(meta):
         Rasterio profile.
 
     """
+
+    
     profile = {
         "driver": "GTiff",
         "dtype": "float32",
@@ -122,7 +113,7 @@ def make_ds_array(profile):
     return ds
 
 
-def get_dataset_outline(dataset, profile, target_epsg=4326, buffer=2):
+def get_dataset_outline(dataset, profile, target_epsg=4326, buffer= 1):
     """
     Get the outline of the input raster dataset, reporject and buffer if wanted.
 
@@ -154,7 +145,6 @@ def get_dataset_outline(dataset, profile, target_epsg=4326, buffer=2):
 
     if target_epsg is None:
         shp = box(left, bottom, right, top)
-        
 
     else:
         out_crs = rasterio.crs.CRS.from_epsg(target_epsg)
@@ -196,18 +186,17 @@ def create_pts(shp, spacing):
         for y in np.arange(miny + offset, maxy - offset, spacing):
             p = Point(x, y)
             if p.within(shp):
-                plist.append(p) 
+                plist.append(p)
 
     if not plist:
         raise ValueError(
             "No points generated. Is the input file covering a large enough AOI?"
         )
-  
-   
+
     return plist
 
 
-def generate_pfs(pts, meta, mikepath, tempdir):
+def generate_pfs(pts, meta, mikepath, tempdir, date):
     """Generate a pfs file using DHI.PFS.
 
     Parameters
@@ -229,10 +218,10 @@ def generate_pfs(pts, meta, mikepath, tempdir):
         If the PFS file could not be created.
 
     """
-    date = datetime.datetime.strptime(meta["sensing_time"], "%Y-%m-%dT%H:%M:%S")
+    #date = datetime.datetime.strptime(meta["sensing_time"], "%Y-%m-%dT%H:%M:%S")
     temppfs = os.path.join(tempdir, "temp.pfs")
+
     dhi_pfs_path = list(mikepath.glob("**/Mike SDK/**/*DHI.PFS.dll"))[0]
-   
     constituents_path = list(
         mikepath.glob("**/global_tide_constituents_height_0.125deg.dfs2")
     )[0]
@@ -256,7 +245,7 @@ def generate_pfs(pts, meta, mikepath, tempdir):
     pfsbuilder.AddTarget("TidePredictor")  # First Section
 
     pfsbuilder.AddKeyword("Name")
-    pfsbuilder.AddString(str(meta["tile_id"]))
+    #pfsbuilder.AddString(str(meta["tile_id"]))
     pfsbuilder.AddKeyword("constituent_file_name")
     pfsbuilder.AddString(str(constituents_path))
     pfsbuilder.AddKeyword("prepack_file_name")
@@ -335,7 +324,7 @@ def make_dfs0(mikepath, pfsfile):
         )
 
 
-def tide_values_from_dfs0(mikepath, meta, dfsfilepath, level):
+def tide_values_from_dfs0(mikepath, meta, dfsfilepath, level, date):
     """Read and extract values from dfs0 file using DHI.Generic.MikeZero.DFS.
 
     Parameters
@@ -383,9 +372,11 @@ def tide_values_from_dfs0(mikepath, meta, dfsfilepath, level):
         msg = f'DHI.Generic not found. Is the path to the mike installation directory correct: "{mikepath}"?'
         raise ValueError(msg) from exception
 
-    dfs_img_datetime = datetime.datetime.strptime(
-        meta["sensing_time"], "%Y-%m-%dT%H:%M:%S"
-    )
+    #dfs_img_datetime = datetime.datetime.strptime(
+    #    meta["sensing_time"], "%Y-%m-%dT%H:%M:%S"
+    #)
+          
+    dfs_img_datetime = date
 
     dfsfile = DHI.Generic.MikeZero.DFS.DfsFileFactory.DfsGenericOpen(dfsfilepath)
     tide_values = []
@@ -447,10 +438,8 @@ def write_tide_values(tide_values, plist, level, outfile, outfolder):
 
     mem_file = fiona.MemoryFile()
     ms = mem_file.open(crs=from_epsg(4326), driver="ESRI Shapefile", schema=pts_schema,)
-
-    # out_name_points = outfile.split('\\')[-1][:-4]+'.shp'
-    outfile_path = Path(outfile)
-    out_name_points = outfile_path.stem + '.shp'
+   
+    out_name_points = outfile.split('\\')[-1][:-4]+'.shp'
 
     for pid, (p, tv) in enumerate(zip(plist, tide_values)):
         prop = {"p_ID": int(pid + 1), str(level): float(tv)}
@@ -465,7 +454,6 @@ def write_tide_values(tide_values, plist, level, outfile, outfolder):
 
     
     return ms
-
 
 def rasterize_points(pc, shp):
     """
@@ -489,7 +477,7 @@ def rasterize_points(pc, shp):
     pc.mode = "r"  # set collection mode to read
 
     # transform for the target raster, hardcoded 0.125 deg resoution as
-    # that is the resolution of the tide values
+
     tr = rasterio.transform.from_origin(shp.bounds[0], shp.bounds[-1], 0.125, 0.125)
 
     minx, miny, maxx, maxy = shp.bounds
@@ -519,38 +507,6 @@ def rasterize_points(pc, shp):
 
     return image, profile
 
-
-def mask_raster(image, profile, shp, landmask):
-    """
-    Mask the output tides raster with the land mask.
-
-    Parameters
-    ----------
-    image : Array
-        The image array created by rasterize_points().
-    profile : Dictionary
-        The dictionary profile created by rasterize_points().
-    shp : Shapely shape
-        Shapely polygon as created by get_dataset_outline().
-    landmask : String
-        Path to the land mask shapefile.
-
-    Returns
-    -------
-    out_image : Array
-        Masked image array.
-
-    """
-    with fiona.open(landmask) as msk:
-        shapes = [f["geometry"] for f in msk if shape(f["geometry"]).within(shp)]
-    with MemoryFile() as memfile:
-        with memfile.open(**profile) as ds:
-            ds.write(image)
-            out_image, out_transform = rasterio.mask.mask(
-                ds, shapes, invert=True, crop=False
-            )
-
-    return out_image
 
 
 def write_raster(src_array, src_profile, dst_array, dst_profile, outfile):
@@ -585,21 +541,21 @@ def write_raster(src_array, src_profile, dst_array, dst_profile, outfile):
         dst_transform=dst_profile["transform"],
         dst_crs=dst_profile["crs"],
         dst_nodata=None,
-        resampling=0,
+        resampling=3,
     )[0]
 
     with rasterio.open(outfile, "w", **dst_profile) as dst:
         dst.write(dst_image)
 
-
-def main(safe, outfolder, level, landmask=None):
+def main(infile, level, outfolder = None, resolution= None, date=None, timestamp=None):
+  
     """
-    Run main function to run the Sentinel 2 command.
+    Run main function to run the points command.
 
     Parameters
     ----------
-    safe : String
-        Path to the sentinel 2 safe folder.
+    infile : String
+        Path to the vht image file.
     outfolder : String
         Path to the output folder. This will be created if it does not exist.
     level : String
@@ -610,52 +566,61 @@ def main(safe, outfolder, level, landmask=None):
     Returns
     -------
     None.
-
     """
+    
+  
+    if outfolder is None:
+        outfolder = pathlib.Path(infile).parent
+        print("\nOutfolder:", outfolder)    
+    else:
+        outfolder = outfolder  
+   
+    meta = read_meta(infile)
+
+  
+        
+    if date is None and timestamp is None:
+        imdfile = list(pathlib.Path(infile).parent.glob("*.imd"))[0]
+        indate  = "20"+imdfile.name[0:13]
+        date = datetime.datetime.strptime(indate, "%Y%b%d%H%M%S")
+        print("\nDate is taken from the .imd file:", date, "Resolution:", meta["resolution"],"m")    
+    else:
+        indate = date
+        date = datetime.datetime.combine(date, timestamp)
+        print("\nDate:", date, "Resolution:", meta["resolution"],"m\n") 
+
     if not os.path.isdir(outfolder):
+        print(os.path.isdir(outfolder))
         os.makedirs(outfolder)
-
-
+     
     mikepath = os.environ.get("MIKE")
     mikepath = pathlib.Path(mikepath)
-
-    metafile = list(pathlib.Path(safe).glob("**/MTD_TL.xml"))[0]
-    meta = read_meta(metafile)
+    
     dst_profile = make_profile(meta)
     dst_array = make_ds_array(dst_profile)
+    
     shp = get_dataset_outline(dst_array, dst_profile)
 
     pts = create_pts(shp, 0.125)
 
     tempfolder = os.path.join(outfolder, "temp")
     os.makedirs(tempfolder, exist_ok=True)
-    generate_pfs(pts, meta, mikepath, tempfolder)
+    
+    generate_pfs(pts, meta, mikepath, tempfolder, date)
 
     temp_pfs_path = str(list(pathlib.Path(tempfolder).glob("*.pfs"))[0])
     make_dfs0(mikepath, temp_pfs_path)
 
     temp_dfs0_path = str(list(pathlib.Path(tempfolder).glob("*.dfs0"))[0])
-    tv = tide_values_from_dfs0(mikepath, meta, temp_dfs0_path, level)
+    tv = tide_values_from_dfs0(mikepath, meta, temp_dfs0_path, level, date)
 
-
-    outfilename = ".".join([meta["tile_id"], "tides", level, "shp"])
+    outfilename = ".".join(["tides",str(indate), level, "shp"])
     outfile = os.path.join(outfolder, outfilename)
-
+    
     c = write_tide_values(tv, pts, level, outfile, outfolder)
-
     src_array, src_profile = rasterize_points(c, shp)
-
-
-    if not landmask:
-        src_array, src_profile = rasterize_points(c, shp)
-    else:
-        unmasked_a, unmasked_p = rasterize_points(c, shp)
-        src_array = mask_raster(unmasked_a, unmasked_p, shp, landmask=landmask)
-        src_profile = unmasked_p
-
-    outfilename = ".".join([meta["tile_id"], "tides_resampling_2", level, "tif"])
-    outfile = os.path.join(outfolder, outfilename)
-
-    write_raster(src_array, src_profile, dst_array, dst_profile, outfile)
+    
+    print("The file is located:", outfile)
+    # write_raster(src_array, src_profile, dst_array, dst_profile, outfile)
 
     shutil.rmtree(tempfolder)

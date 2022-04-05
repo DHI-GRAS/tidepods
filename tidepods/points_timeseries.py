@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Apr 13 10:57:13 2021
+Created on March 13 2022
 
-@author: vlro
+@autor: ansu
 """
-import pathlib as Path
 import pathlib
+from pathlib import Path
 import xml.etree.ElementTree as ET
 import numpy as np
 from affine import Affine
@@ -18,14 +18,21 @@ import subprocess
 import rasterio
 from rasterio import features
 import shutil
+import matplotlib
+import matplotlib.pyplot as plt
 from rasterio.io import MemoryFile
+from rasterio.transform import Affine
 import rasterio.warp
 import rasterio.mask
+from datetime import datetime as dt
+import mikeio
+from mikeio import Dfs0, Dataset
 
-VALID_LEVELS = ["LAT", "MSL"]
+
+# import ipdb; ipdb.set_trace()
 
 
-def read_meta(metafile):
+def read_meta(infile):
     """
     Read metadata xml file of Sentinel 2 tile.
 
@@ -40,31 +47,18 @@ def read_meta(metafile):
         Dictionary of relevant metadata used to create the tide surface.
 
     """
-    root = ET.parse(metafile).getroot()
     meta = {}
-
-    # get raster tile_id
-    meta["tile_id"] = [x.text for x in root.iter("TILE_ID")][0]
-    # get raster sensing time
-    meta["sensing_time"] = [x.text for x in root.iter("SENSING_TIME")][0][0:19]
-
-    # get raster epsg
-    meta["epsg"] = [x.text for x in root.iter("HORIZONTAL_CS_CODE")][0]
-
-    # get raster shape
-    for x in root.iter("Size"):
-        if x.attrib["resolution"] == "10":
-            meta["nrows"] = float(x.find("NROWS").text)
-            meta["ncols"] = float(x.find("NCOLS").text)
-
-    # get raster geoposition for affine transform
-    for x in root.iter("Geoposition"):
-        if x.attrib["resolution"] == "10":
-            meta["ulx"] = float(x.find("ULX").text)
-            meta["uly"] = float(x.find("ULY").text)
-            meta["xdim"] = float(x.find("XDIM").text)
-            meta["ydim"] = float(x.find("YDIM").text)
-
+    
+    dataset = rasterio.open(infile)
+    meta["ncols"], meta["nrows"] = dataset.shape
+    meta["epsg"] = dataset.crs
+   
+    transform = dataset.transform
+    meta["ulx"] = float(transform[2])
+    meta["uly"] = float(transform[5])
+    meta["xdim"] = float(transform[0])
+    meta["ydim"] = float(transform[4])    
+    
     return meta
 
 
@@ -83,6 +77,8 @@ def make_profile(meta):
         Rasterio profile.
 
     """
+
+    
     profile = {
         "driver": "GTiff",
         "dtype": "float32",
@@ -122,7 +118,7 @@ def make_ds_array(profile):
     return ds
 
 
-def get_dataset_outline(dataset, profile, target_epsg=4326, buffer=2):
+def get_dataset_outline(dataset, profile, target_epsg=4326, buffer= 0.25):
     """
     Get the outline of the input raster dataset, reporject and buffer if wanted.
 
@@ -154,7 +150,6 @@ def get_dataset_outline(dataset, profile, target_epsg=4326, buffer=2):
 
     if target_epsg is None:
         shp = box(left, bottom, right, top)
-        
 
     else:
         out_crs = rasterio.crs.CRS.from_epsg(target_epsg)
@@ -196,18 +191,17 @@ def create_pts(shp, spacing):
         for y in np.arange(miny + offset, maxy - offset, spacing):
             p = Point(x, y)
             if p.within(shp):
-                plist.append(p) 
+                plist.append(p)
 
     if not plist:
         raise ValueError(
             "No points generated. Is the input file covering a large enough AOI?"
         )
-  
-   
+
     return plist
 
 
-def generate_pfs(pts, meta, mikepath, tempdir):
+def generate_pfs(pts, meta, mikepath, tempdir, date):
     """Generate a pfs file using DHI.PFS.
 
     Parameters
@@ -229,10 +223,11 @@ def generate_pfs(pts, meta, mikepath, tempdir):
         If the PFS file could not be created.
 
     """
-    date = datetime.datetime.strptime(meta["sensing_time"], "%Y-%m-%dT%H:%M:%S")
+
     temppfs = os.path.join(tempdir, "temp.pfs")
+
     dhi_pfs_path = list(mikepath.glob("**/Mike SDK/**/*DHI.PFS.dll"))[0]
-   
+
     constituents_path = list(
         mikepath.glob("**/global_tide_constituents_height_0.125deg.dfs2")
     )[0]
@@ -256,19 +251,23 @@ def generate_pfs(pts, meta, mikepath, tempdir):
     pfsbuilder.AddTarget("TidePredictor")  # First Section
 
     pfsbuilder.AddKeyword("Name")
-    pfsbuilder.AddString(str(meta["tile_id"]))
+    #pfsbuilder.AddString(str(meta["tile_id"]))
     pfsbuilder.AddKeyword("constituent_file_name")
     pfsbuilder.AddString(str(constituents_path))
+
     pfsbuilder.AddKeyword("prepack_file_name")
     pfsbuilder.AddString(str(prepack_path))
+
     pfsbuilder.AddKeyword("start_date")
-    DHI.PFS.PFSExtensions.AddDate(pfsbuilder, System.DateTime(date.year, 1, 1))
+    DHI.PFS.PFSExtensions.AddDate(pfsbuilder, System.DateTime(date.year-1, date.month, date.day))
     pfsbuilder.AddKeyword("end_date")
-    DHI.PFS.PFSExtensions.AddDate(pfsbuilder, System.DateTime(date.year, 12, 31))
+    DHI.PFS.PFSExtensions.AddDate(pfsbuilder, System.DateTime(date.year, date.month, date.day))
     pfsbuilder.AddKeyword("timestep")
-    pfsbuilder.AddDouble(0.5)
+    pfsbuilder.AddDouble(24)
+
     pfsbuilder.AddKeyword("number_of_files")
     pfsbuilder.AddInt(1)
+
     pfsbuilder.AddKeyword("ShowGeographic")
     pfsbuilder.AddInt(1)
 
@@ -300,9 +299,11 @@ def generate_pfs(pts, meta, mikepath, tempdir):
 
     if not os.path.exists(temppfs):
         raise ValueError("PFS file not created. Recheck creation options.")
-
+        
+  
 
 def make_dfs0(mikepath, pfsfile):
+
     """Generate a dfs0 file from the input PFS in the same directory.
 
     Parameters
@@ -319,6 +320,7 @@ def make_dfs0(mikepath, pfsfile):
     """
     tp = str(list(mikepath.glob("**/TidePredictor.exe"))[0])
     cmd = [tp, pfsfile]
+    
     try:
         subprocess.check_call(cmd, shell=True)
     except subprocess.CalledProcessError as e:
@@ -335,7 +337,7 @@ def make_dfs0(mikepath, pfsfile):
         )
 
 
-def tide_values_from_dfs0(mikepath, meta, dfsfilepath, level):
+def tide_values_from_dfs0(mikepath, meta, dfsfilepath, date, df):
     """Read and extract values from dfs0 file using DHI.Generic.MikeZero.DFS.
 
     Parameters
@@ -346,8 +348,6 @@ def tide_values_from_dfs0(mikepath, meta, dfsfilepath, level):
         Metadata dictionary created by read_meta().
     dfsfilepath : str
         Path to the dfs file created by make_dfs0().
-    level : str
-        Click option LAT or MSL.
 
     Returns
     -------
@@ -356,16 +356,15 @@ def tide_values_from_dfs0(mikepath, meta, dfsfilepath, level):
 
     Raises
     ------
-    ValueError
-        If an invalid level type was provided.
+
+
     ValueError
         If DHI.Generic could not be imported or is not found in the sdkpath folder.
     ValueError
         If no tide values could be generated.
 
     """
-    if level not in VALID_LEVELS:
-        raise ValueError(f"Level should be one of {VALID_LEVELS}, not {level}.")
+
 
     import clr
 
@@ -383,46 +382,45 @@ def tide_values_from_dfs0(mikepath, meta, dfsfilepath, level):
         msg = f'DHI.Generic not found. Is the path to the mike installation directory correct: "{mikepath}"?'
         raise ValueError(msg) from exception
 
-    dfs_img_datetime = datetime.datetime.strptime(
-        meta["sensing_time"], "%Y-%m-%dT%H:%M:%S"
-    )
-
-    dfsfile = DHI.Generic.MikeZero.DFS.DfsFileFactory.DfsGenericOpen(dfsfilepath)
-    tide_values = []
-
+    #dfs_img_datetime = datetime.datetime.strptime(
+    #    meta["sensing_time"], "%Y-%m-%dT%H:%M:%S"
+    #)
+          
+    dfs_img_datetime = date
+    dfsfile = DHI.Generic.MikeZero.DFS.DfsFileFactory.DfsGenericOpen(dfsfilepath)    
+  
     # read timestep in seconds, convert to minutes
-    timestep = int(dfsfile.FileInfo.TimeAxis.TimeStep / 60)
+    timestep = int(dfsfile.FileInfo.TimeAxis.TimeStep)
     sdt = dfsfile.FileInfo.TimeAxis.StartDateTime
+
     dfs_start_datetime = datetime.datetime(
-        *(getattr(sdt, n) for n in ["Year", "Month", "Day", "Hour", "Minute", "Second"])
-    )
+        *(getattr(sdt, n) for n in ["Year", "Month", "Day", "Hour", "Minute", "Second"]))
+
+    print("dfs_start_datetime", dfs_start_datetime)
+    print("dfs_img_datetime", dfs_img_datetime)
 
     diff = dfs_img_datetime - dfs_start_datetime
-    img_timestep = int(((diff.days * 24 * 60) + (diff.seconds / 60)) / timestep)
 
+    
+    tide_values_lat = []
+    tide_values_hat = []
     for i in range(len(dfsfile.ItemInfo)):
         min_value = float(dfsfile.ItemInfo[i].MinValue)
-        acq_value = dfsfile.ReadItemTimeStep(i + 1, img_timestep).Data[
-            0
-        ]  # Value c.f. MSL
+        max_value = float(dfsfile.ItemInfo[i].MaxValue)
+        tide_values_lat.append(min_value)
+        tide_values_hat.append(max_value) 
 
-        if level == "LAT":
-            lat_value = acq_value - min_value  # Value above LAT
-            tide_values.append(lat_value)
-        elif level == "MSL":
-            tide_values.append(acq_value)
-        else:
-            raise ValueError("Invalid level.")
+    tide_values_msl = []   
+    for (columnName, columnData) in df.iteritems():
+        msl_value = columnData.mean()
+        tide_values_msl.append(msl_value) 
 
     dfsfile.Dispose()
 
-    if not tide_values:
-        raise ValueError("No tide values generated, recheck AOI")
-
-    return tide_values
+    return tide_values_msl, tide_values_lat, tide_values_hat, 
 
 
-def write_tide_values(tide_values, plist, level, outfile, outfolder):
+def write_tide_values(tv_MSL,tv_LAT,tv_HAT, plist, outfile, outfolder):
     """Write generated points and tide values to a new shapefile.
 
     Parameters
@@ -430,9 +428,7 @@ def write_tide_values(tide_values, plist, level, outfile, outfolder):
     tide_values : list
         List of tide values generated by tide_values_from_dfs0().
     plist : list
-        List of shapely points generated by create_pts().
-    level : str
-        Click option LAT or MSL.
+        List of shapely points generated by create_pts()
 
     Returns
     -------
@@ -442,30 +438,27 @@ def write_tide_values(tide_values, plist, level, outfile, outfolder):
     """
     pts_schema = {
         "geometry": "Point",
-        "properties": {"p_ID": "int", str(level): "float"},
-    }
-
+        "properties": {"p_ID": "int", "MSL": "float",
+                       "LAT": "float", "HAT": "float"}}
     mem_file = fiona.MemoryFile()
-    ms = mem_file.open(crs=from_epsg(4326), driver="ESRI Shapefile", schema=pts_schema,)
+    ms = mem_file.open(crs=from_epsg(4326), driver="ESRI Shapefile", schema=pts_schema)
 
-    # out_name_points = outfile.split('\\')[-1][:-4]+'.shp'
     outfile_path = Path(outfile)
     out_name_points = outfile_path.stem + '.shp'
 
-    for pid, (p, tv) in enumerate(zip(plist, tide_values)):
-        prop = {"p_ID": int(pid + 1), str(level): float(tv)}
+    for pid, (p, tv_MSLL,tv_LATT,tv_HATT) in enumerate(zip(plist, tv_MSL,tv_LAT,tv_HAT)):
+        prop = {"p_ID": int(pid + 1), "MSL": float(tv_MSLL),
+              "LAT": float(tv_LATT), "HAT": float(tv_HATT)}
         ms.write({"geometry": mapping(p), "properties": prop})
     
     
     with fiona.open(outfile, 'w', crs=from_epsg(4326), driver='ESRI Shapefile',
                     schema=pts_schema) as output:
-        for pid, (p, tv) in enumerate(zip(plist, tide_values)):
-            prop = {"p_ID": int(pid + 1), str(level): float(tv)}
+        for pid, (p, tv_MSL,tv_LAT,tv_HAT) in enumerate(zip(plist, tv_MSL,tv_LAT,tv_HAT)):
+            prop = {"p_ID": int(pid + 1), "MSL": float(tv_MSL),"LAT": float(tv_LAT), "HAT": float(tv_HAT)}
             output.write({"geometry": mapping(p), "properties": prop})
-
     
     return ms
-
 
 def rasterize_points(pc, shp):
     """
@@ -486,10 +479,11 @@ def rasterize_points(pc, shp):
         Dictionary of the updated profile.
 
     """
-    pc.mode = "r"  # set collection mode to read
+    pc.mode = "r"  
+
 
     # transform for the target raster, hardcoded 0.125 deg resoution as
-    # that is the resolution of the tide values
+
     tr = rasterio.transform.from_origin(shp.bounds[0], shp.bounds[-1], 0.125, 0.125)
 
     minx, miny, maxx, maxy = shp.bounds
@@ -507,50 +501,23 @@ def rasterize_points(pc, shp):
         "transform": tr,
     }
 
-    image = features.rasterize(
-        (
-            (p["geometry"], p["properties"][[*pc.schema["properties"].keys()][1]])
-            for p in pc
-        ),
-        out_shape=(xsize, ysize),
-        transform=tr,
-    )
-    image = image[np.newaxis, :, :]
-
-    return image, profile
+    image_MSL = features.rasterize(((p["geometry"], p["properties"][[*pc.schema["properties"].keys()][1]])
+            for p in pc), out_shape=(xsize, ysize),transform=tr)
+    image_MSL = image_MSL[np.newaxis, :, :]
 
 
-def mask_raster(image, profile, shp, landmask):
-    """
-    Mask the output tides raster with the land mask.
+    image_LAT = features.rasterize(((p["geometry"], p["properties"][[*pc.schema["properties"].keys()][2]])
+            for p in pc), out_shape=(xsize, ysize),transform=tr)
+    image_LAT = image_LAT[np.newaxis, :, :]
 
-    Parameters
-    ----------
-    image : Array
-        The image array created by rasterize_points().
-    profile : Dictionary
-        The dictionary profile created by rasterize_points().
-    shp : Shapely shape
-        Shapely polygon as created by get_dataset_outline().
-    landmask : String
-        Path to the land mask shapefile.
 
-    Returns
-    -------
-    out_image : Array
-        Masked image array.
+ 
+    image_HAT = features.rasterize(((p["geometry"], p["properties"][[*pc.schema["properties"].keys()][3]])
+            for p in pc), out_shape=(xsize, ysize),transform=tr)
+    image_HAT = image_HAT[np.newaxis, :, :]
 
-    """
-    with fiona.open(landmask) as msk:
-        shapes = [f["geometry"] for f in msk if shape(f["geometry"]).within(shp)]
-    with MemoryFile() as memfile:
-        with memfile.open(**profile) as ds:
-            ds.write(image)
-            out_image, out_transform = rasterio.mask.mask(
-                ds, shapes, invert=True, crop=False
-            )
+    return image_MSL, image_LAT, image_HAT, profile
 
-    return out_image
 
 
 def write_raster(src_array, src_profile, dst_array, dst_profile, outfile):
@@ -585,77 +552,95 @@ def write_raster(src_array, src_profile, dst_array, dst_profile, outfile):
         dst_transform=dst_profile["transform"],
         dst_crs=dst_profile["crs"],
         dst_nodata=None,
-        resampling=0,
+        resampling=1,
     )[0]
 
     with rasterio.open(outfile, "w", **dst_profile) as dst:
         dst.write(dst_image)
 
+def main(infile, outfolder = None, date=None, timestamp=None):
 
-def main(safe, outfolder, level, landmask=None):
     """
-    Run main function to run the Sentinel 2 command.
+    Run main function to run the timeseries command.
 
     Parameters
     ----------
-    safe : String
-        Path to the sentinel 2 safe folder.
+    infile : String
+        Path to the vht image file.
     outfolder : String
         Path to the output folder. This will be created if it does not exist.
-    level : String
-        Click option LAT or MSL.
-    land_mask : String, optional
-        Path to the land mask to be applied. The default is None.
 
     Returns
     -------
     None.
-
     """
+  
+    if outfolder is None:
+        outfolder = pathlib.Path(infile).parent
+    else:
+        outfolder = outfolder  
+   
+    meta = read_meta(infile)
+
+    if date is None and timestamp is None:
+        imdfile = list(pathlib.Path(infile).parent.glob("*.imd"))[0]
+        indate  = "20"+imdfile.name[0:13]
+        date = datetime.datetime.strptime(indate, "%Y%b%d%H%M%S")
+        print("\nDate is taken from the .imd file:", date)    
+    else:
+        indate = date
+        date = datetime.datetime.combine(date, timestamp)
+        print("\nDate:", date,"\n") 
+
     if not os.path.isdir(outfolder):
         os.makedirs(outfolder)
-
-
-    mikepath = os.environ.get("MIKE")
+     
+    
+    mikepath = os.environ.get['MIKE']
     mikepath = pathlib.Path(mikepath)
-
-    metafile = list(pathlib.Path(safe).glob("**/MTD_TL.xml"))[0]
-    meta = read_meta(metafile)
+    
     dst_profile = make_profile(meta)
     dst_array = make_ds_array(dst_profile)
+    
     shp = get_dataset_outline(dst_array, dst_profile)
-
     pts = create_pts(shp, 0.125)
 
     tempfolder = os.path.join(outfolder, "temp")
     os.makedirs(tempfolder, exist_ok=True)
-    generate_pfs(pts, meta, mikepath, tempfolder)
+    generate_pfs(pts, meta, mikepath, tempfolder, date)
 
     temp_pfs_path = str(list(pathlib.Path(tempfolder).glob("*.pfs"))[0])
     make_dfs0(mikepath, temp_pfs_path)
-
     temp_dfs0_path = str(list(pathlib.Path(tempfolder).glob("*.dfs0"))[0])
-    tv = tide_values_from_dfs0(mikepath, meta, temp_dfs0_path, level)
 
 
-    outfilename = ".".join([meta["tile_id"], "tides", level, "shp"])
-    outfile = os.path.join(outfolder, outfilename)
+    dfs = Dfs0(temp_dfs0_path)
+    df = dfs.to_dataframe()
+    utfilename_csv = ".".join(["tides",str(indate), "csv"])
+    outfile_csv = os.path.join(outfolder, utfilename_csv)
+    df.to_csv(outfile_csv)
 
-    c = write_tide_values(tv, pts, level, outfile, outfolder)
 
-    src_array, src_profile = rasterize_points(c, shp)
+    tv_MSL,tv_LAT,tv_HAT = tide_values_from_dfs0(mikepath, meta, temp_dfs0_path, date, df)
+
+    outfilename_shp = ".".join(["tides",str(indate), "shp"])
+    outfile_shp = os.path.join(outfolder, outfilename_shp)
+    
+    c = write_tide_values(tv_MSL,tv_LAT,tv_HAT, pts, outfile_shp, outfolder)
+
+    image_MSL, image_LAT, image_HAT, src_profile = rasterize_points(c, shp)
+
+    utfilename_tif_MSL = ".".join(["tides",str(indate), "MSL", "tif"])
+    outfile_tif_MSL = os.path.join(outfolder, utfilename_tif_MSL)
+    write_raster(image_MSL, src_profile, dst_array, dst_profile, outfile_tif_MSL)
+
+    outfilename_tif_HAT = ".".join(["tides",str(indate), "HAT", "tif"])
+    outfile_tif_HAT = os.path.join(outfolder, outfilename_tif_HAT)
+    write_raster(image_HAT, src_profile, dst_array, dst_profile, outfile_tif_HAT)
 
 
-    if not landmask:
-        src_array, src_profile = rasterize_points(c, shp)
-    else:
-        unmasked_a, unmasked_p = rasterize_points(c, shp)
-        src_array = mask_raster(unmasked_a, unmasked_p, shp, landmask=landmask)
-        src_profile = unmasked_p
+    outfilename_tif_LAT = ".".join(["tides",str(indate), "LAT", "tif"])
+    outfile_tif_LAT = os.path.join(outfolder, outfilename_tif_LAT)
+    write_raster(image_LAT, src_profile, dst_array, dst_profile, outfile_tif_LAT)    
 
-    outfilename = ".".join([meta["tile_id"], "tides_resampling_2", level, "tif"])
-    outfile = os.path.join(outfolder, outfilename)
-
-    write_raster(src_array, src_profile, dst_array, dst_profile, outfile)
-
-    shutil.rmtree(tempfolder)
+    # shutil.rmtree(tempfolder) 

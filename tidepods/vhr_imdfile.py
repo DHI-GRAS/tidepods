@@ -114,7 +114,7 @@ def make_ds_array(profile):
     return ds
 
 
-def get_dataset_outline(dataset, profile, target_epsg=4326, buffer=0.125):
+def get_dataset_outline(dataset, profile, target_epsg=4326, buffer=0.5):
     """
     Get the outline of the input raster dataset, reporject and buffer if wanted.
 
@@ -532,7 +532,6 @@ def mask_raster(image, profile, shp, landmask):
 
     return out_image
 
-
 def write_raster(src_array, src_profile, dst_array, dst_profile, outfile):
     """
     Write the final masked or unmasked raster to file.
@@ -565,7 +564,7 @@ def write_raster(src_array, src_profile, dst_array, dst_profile, outfile):
         dst_transform=dst_profile["transform"],
         dst_crs=dst_profile["crs"],
         dst_nodata=None,
-        resampling=3,
+        resampling=2,
     )[0]
 
     with rasterio.open(outfile, "w", **dst_profile) as dst:
@@ -607,13 +606,14 @@ def main(infile, level, outfolder = None, resolution= None, date=None, timestamp
     else:
         indate = date
         date = datetime.datetime.combine(date, timestamp)
-        print("Date:", date, "Resolution:", meta["resolution"],"m") 
-        
+        print("Date:", date, "Resolution:", meta["resolution"],"m\n") 
+
     if not os.path.isdir(outfolder):
         print(os.path.isdir(outfolder))
         os.makedirs(outfolder)
-       
-    mikepath = os.environ.get("MIKE")
+     
+    mikepath = os.environ.get['MIKE']
+
     mikepath = pathlib.Path(mikepath)
     
     dst_profile = make_profile(meta)
@@ -643,7 +643,7 @@ def main(infile, level, outfolder = None, resolution= None, date=None, timestamp
         src_array = mask_raster(unmasked_a, unmasked_p, shp, landmask=landmask)
         src_profile = unmasked_p
 
-    outfilename = ".".join(["tides",str(indate), level, "tif"])
+    outfilename = ".".join(["tides_resampling_2_old125",str(indate), level, "tif"])
     outfile = os.path.join(outfolder, outfilename)
 
     write_raster(src_array, src_profile, dst_array, dst_profile, outfile)

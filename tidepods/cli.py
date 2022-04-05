@@ -42,7 +42,9 @@ def s2(**kwargs):
 
     Example use:
 
-    tidepods s2 -s C:/S2A_MSIL1C_20180524T023551_N0206_R089_T50QQM_20180524T051356.SAFE -o C:/tides_output -l MSL -m C:/tides_input/land_mask.shp
+    tidepods s2 -s C:/path-to-sentinel-folder/S2B_MSIL1C_XXX.SAFE 
+    -l MSL -o C:/user/path-to-output-folder/
+    
     """
     from tidepods import sentinel2
 
@@ -78,7 +80,9 @@ def icesat2(**kwargs):
 
     Example use:
 
-    tidepods icesat2 -s C:/tides/processed_icesat_pts.shp -o C:/tides_output -l MSL
+    tidepods icesat2 -s A:/user/path-to-shapefile-folder/ICESat-2/Tidepods.shp
+     -l MSL -o A:/user/path-to-output-folder/ICESat-2/Tidepods.shp
+
     """
     from tidepods import icesat2
 
@@ -164,9 +168,77 @@ def vhr(**kwargs):
     """Create a point shp containing tide values over AOI (VHR image).
     
     Example use:
-    tidepods points -p "C:/Program Files (x86)/DHI/2016/MIKE SDK/bin" -i C:/tides/aoi.tif
-    -d 20150131 -t 10:30 -o C:/tides/pts_tides.shp
+    tidepods vhr -i A:/user/path-to-vhrfile/vhr.tif -d 20200815 -t 15:45 -l MSL
     """
     from tidepods import vhr_imdfile
     vhr_imdfile.main(**kwargs)
-    
+
+
+TIMEIN = TimeType()
+DATEIN = DateType()
+
+
+@cli.command()
+@click.option('-i', '--infile', type=click.Path(dir_okay=False, exists=True), required=True,
+              help='Path to AOI raster or shapefile for points creation e.g. C:/tides/aoi.tif')
+
+@click.option('-d', '--date', type=DATEIN, required=True,
+              help='Image acquisiton date (yyyymmdd) e.g. 20150131')
+
+@click.option('-t', '--timestamp', type=TIMEIN, required=True,
+              help='Image acquisition time (HH:MM) e.g. 10:30')
+
+@click.option('-o', '--outfolder', type=click.Path(dir_okay = True), required=True,
+              help='Path to output points shapefile containing the tidal values '
+              'e.g. C:/tides')
+
+@click.option('-l', '--level', type=click.Choice(['LAT', 'MSL']), required=True,
+              help='Tide value return type, LAT (Lowest Astronomical Tide) '
+              'or MSL (Mean Sea Level)')
+
+def points(**kwargs):
+    """Create a point shapefile containing tide values over an AOI
+
+    Example use:
+    tidepods points -i A:/user/path-to-tif-file/mosaic.tif -l MSL 
+    -o A:/user/path-to-output-folder/points.shp -d 20200407 -t 10:40
+
+    """
+
+    from tidepods import points
+   
+    points.main(**kwargs)
+
+
+ # Timeseries
+ 
+@cli.command()
+@click.option('-i', '--infile', type=click.Path(dir_okay=False, exists=True), required=True,
+              help='Path to AOI raster or shapefile for points creation e.g. C:/tides/aoi.tif')
+
+@click.option('-d', '--date', type=DATEIN, required=True,
+              help='Image acquisiton date (yyyymmdd) e.g. 20150131')
+
+@click.option('-t', '--timestamp', type=TIMEIN, required=True,
+              help='Image acquisition time (HH:MM) e.g. 10:30')
+
+@click.option('-o', '--outfolder', type=click.Path(dir_okay = True), required=True,
+              help='Path to output points shapefile containing the tidal values '
+              'e.g. C:/tides')
+              
+
+def timeseries(**kwargs):
+    """Create a tide timeseries csv file over an AOI, 
+    shapefile containing MSL, HAT and LAT tide values and
+    rasters containg MSL, HAT and LAT tide values.
+
+    Example use:
+    tidepods timeseries -i A:/user/path-to-tif-file/AOI.tif  
+    -o A:/user/path-to-output-folder/timeseries -d 20200407 -t 10:40
+
+    """
+
+    from tidepods import points_timeseries
+   
+    points_timeseries.main(**kwargs)   
+

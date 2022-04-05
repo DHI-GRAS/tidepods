@@ -259,13 +259,16 @@ def tide_values_from_dfs0(mikepath, pts, dfsfilepath, level):
 
 
 def main(shapefile, outfolder, level):
+
+    mikepath = os.environ.get("MIKE")
+    mikepath = pathlib.Path(mikepath)
+
     if not os.path.isdir(outfolder):
         os.makedirs(outfolder)
 
     shapefile_path = pathlib.Path(shapefile)
     shapefile_name = shapefile_path.stem
-    mikepath = os.environ.get("MIKE")
-    mikepath = pathlib.Path(mikepath)
+  
     pts = read_shapefile_pts(shapefile)
 
     tempfolder = os.path.join(outfolder, "temp")
