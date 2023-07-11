@@ -2,9 +2,8 @@
 
 Extract gridded tide values from MIKE for a given area of interest and create a tidal surface.
 
-Usage requires MIKE Zero(default: 2021) and the MIKE SDK
 
-NOTE: Please note that the new version 2021 branch does not work with the 2016 version. 
+NOTE: Please note that the new version MIKE 2021 should be installed, it does not work with the 2016 version. 
 
 
 ## Installation
