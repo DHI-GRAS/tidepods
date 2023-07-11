@@ -29,7 +29,7 @@ NOTE: Please note that the new version MIKE 2021 should be installed, it does no
 7. Add the root MIKE installation directory to the environment variables, naming it "MIKE" e.g.:
 	```
 	Variable: MIKE
-	Value: C:\Program Files (x86)\DHI\
+	Value: C:\Program Files (x86)\DHI
 	```
 8. Rename the folder "C:\Program Files (x86)\DHI\Mike Core SDK\2021" --> "C:\Program Files (x86)\DHI\Mike SDK\2021"	
 9. If you get an error: "TypeError: expected str, bytes or os.PathLike object, not NoneType" , try to activate env (activate tidepods) and set up the path:
