@@ -4,6 +4,9 @@ Extract gridded tide values from MIKE for a given area of interest and create a 
 
 Usage requires MIKE Zero(default: 2021) and the MIKE SDK
 
+NOTE: Please note that the new version 2021 branch does not work with the 2016 version. 
+
+
 ## Installation
 
 ### 1. Setup
@@ -102,3 +105,13 @@ Options:
   --help                     Show this message and exit.
 ```
 
+Examples:
+•  Sentinel-2 images
+```
+(tidepods) C:\Users>tidepods s2 -s M:/SDBd/S2A_MSIL1C_20210801T221941_N0301_R029_T60KXE_20210801T233745.SAFE -l MSL -o //dkcph1-ncr2421/ICESat2/tidepods_MSL
+```
+
+• icesat2 
+```
+(tidepods) C:\Users>tidepods icesat2 -s C:/Users/ansu/Desktop/tidepods-ansu/tidepods_A.shp -l LAT -o C:/Users/ansu/Desktop/tidepods-ansu
+```
